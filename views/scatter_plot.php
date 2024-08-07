@@ -57,6 +57,7 @@ if ($stmt === false) {
 $dataSets = [];
 $xLabels = [];
 $yLabels = [];
+$column_to_test_name_map = [];
 
 // Check if at least one parameter is selected
 if (count($filters['tm.Column_Name']) >= 1) {
@@ -76,6 +77,9 @@ if (count($filters['tm.Column_Name']) >= 1) {
     // Process rows from the SQL query
     while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         foreach ($dataSets as $i => $dataSet) {
+            if (!empty($row['Column_Name']) && !empty($row['Test_Name'])) {
+                $column_to_test_name_map[$row['Column_Name']] = '[' . substr($row['Column_Name'], 1) . ']' . $row['Test_Name'];
+            }
             $xValue = floatval($row[$dataSet['x']]);
             $yValue = floatval($row[$dataSet['y']]);
             $dataSets[$i]['data'][] = ['x' => $xValue, 'y' => $yValue];
@@ -86,13 +90,21 @@ if (count($filters['tm.Column_Name']) >= 1) {
 // Free the statement after fetching the data
 sqlsrv_free_stmt($stmt);
 
+$xLabels = array_map(function($column) use ($column_to_test_name_map) {
+    return isset($column_to_test_name_map[$column]) ? $column_to_test_name_map[$column] : $column;
+}, $xLabels);
+
+$yLabels = array_map(function($column) use ($column_to_test_name_map) {
+    return isset($column_to_test_name_map[$column]) ? $column_to_test_name_map[$column] : $column;
+}, $yLabels);
+
 // Encode the datasets for JSON output
 $datasetsJson = json_encode($dataSets);
 $xLabelsJson = json_encode($xLabels);
 $yLabelsJson = json_encode($yLabels);
 ?>
 
-
+<h1 class="text-center text-4xl font-semibold mb-4">XY Scatter Plots</h1>
 <div id="chartsContainer"></div>
 
 <script>
@@ -106,7 +118,7 @@ $yLabelsJson = json_encode($yLabels);
 
     dataSets.forEach((dataSet, index) => {
         const div = document.createElement('div');
-        div.className = 'chart-container';
+        div.className = 'chart-container w-1/<?= count($dataSets) ?> max-w-md justify-self-center';
         const canvas = document.createElement('canvas');
         canvas.id = `chart-${index}`;
         div.appendChild(canvas);
@@ -118,26 +130,27 @@ $yLabelsJson = json_encode($yLabels);
                 datasets: [{
                     label: `${dataSet.x} vs ${dataSet.y}`,
                     data: dataSet.data,
-                    backgroundColor: 'rgba(100, 130, 173, 0.6)', // Using #6482AD with some opacity
-                    borderColor: 'rgba(100, 130, 173, 1)',       // Using #6482AD
+                    backgroundColor: 'rgba(115, 33, 98, 0.6)',
+                    borderColor: 'rgba(82, 16, 69, 1)',
                     pointRadius: 2,
                     showLine: false
                 }]
             },
             options: {
+                maintainAspectRatio: true,
                 scales: {
                     x: {
                         type: 'linear',
                         position: 'bottom',
                         title: {
                             display: true,
-                            text: dataSet.x
+                            text: xLabels[index]
                         }
                     },
                     y: {
                         title: {
                             display: true,
-                            text: dataSet.y
+                            text: yLabels[index]
                         }
                     }
                 }

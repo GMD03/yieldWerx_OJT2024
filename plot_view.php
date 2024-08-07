@@ -18,10 +18,6 @@
             grid-gap: 10px;
             justify-content: center;
         }
-        .chart-container {
-            width: 300px;
-            height: 300px;
-        }
     </style>
 </head>
 <body class="bg-gray-100">
