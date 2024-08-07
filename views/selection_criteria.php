@@ -1,23 +1,9 @@
 <?php
-require __DIR__ . '/../connection.php';
+    require_once('controllers/SelectionController.php');
 
-// Query to populate the initial facility options
-$query = "SELECT Facility_ID FROM lot";
-$facilities = [];
-$stmt = sqlsrv_query($conn, $query);
-while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    $facilities[] = $row['Facility_ID'];
-}
-sqlsrv_free_stmt($stmt);
-
-// Query to populate filter options from ProbingSequenceOrder
-$filterQuery = "SELECT abbrev, probing_sequence FROM ProbingSequenceOrder";
-$abbrev = [];
-$filterStmt = sqlsrv_query($conn, $filterQuery);
-while ($row = sqlsrv_fetch_array($filterStmt, SQLSRV_FETCH_ASSOC)) {
-    $abbrev[] = ['abbrev' => $row['abbrev'], 'probing_sequence' => $row['probing_sequence']];
-}
-sqlsrv_free_stmt($filterStmt);
+    $selectionController = new SelectionController();
+    $facilities = $selectionController->getFacilities();
+    $abbrev = $selectionController->getProbingFilter();
 ?>
 
 <style>
@@ -28,7 +14,7 @@ sqlsrv_free_stmt($filterStmt);
 
 <div class="container mx-auto p-6">
     <h1 class="text-center text-2xl font-bold mb-4 w-full">Selection Criteria</h1>
-    <form action="dashboard.php" method="GET" id="criteriaForm">
+    <form action="table_view.php" method="GET" id="criteriaForm">
         <div class="flex w-full justify-end items-end">
             <button id="dropdownSearchButton" data-dropdown-toggle="dropdownSearch" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
                 <i class="fa-solid fa-filter"></i>&nbsp;Filter 

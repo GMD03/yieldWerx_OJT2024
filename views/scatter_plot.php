@@ -1,5 +1,8 @@
 <?php
-require __DIR__ . '/../connection.php';
+    require_once('libs/Database.php');
+    
+    $database = new Database();
+    $conn = $database->connect();
 
 // Filters from URL parameters
 $filters = [
@@ -122,86 +125,40 @@ if (!empty($abbrev_data)) {
     sqlsrv_free_stmt($stmt);
 }
 
+sqlsrv_close($conn);
+
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Dashboard</title>
-   <link rel="stylesheet" href="../src/output.css">
-   <script src="../path/to/flowbite/dist/flowbite.min.js"></script>
-   <link href="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.css" rel="stylesheet" />
-   <script src="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
-   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="bg-gray-100">
-<?php include('admin_components.php'); ?>
-<div class="p-4 sm:ml-64">
-    <div class="p-4 rounded-lg dark:border-gray-700 mt-14">
-        <h1 class="text-center text-2xl font-bold mb-4 w-full">XY Scatter Plot</h1>
-        <div class="grid grid-cols-<?php echo !empty($abbrev_data) ? '2' : '1'; ?> gap-4 px-32 max-h-[50rem]">
-          <?php if (!empty($abbrev_data)): ?>
-            <?php foreach ($abbrev_data as $abbrev): ?>
-                <div class="mb-6">
-                    <h2 class="text-center text-xl font-semibold mb-4"><?php echo htmlspecialchars($abbrev_map[$abbrev] ?? $abbrev); ?></h2>
-                    <canvas id="chartXY-<?php echo htmlspecialchars($abbrev); ?>"></canvas>
-                </div>
-            <?php endforeach; ?>
-          <?php else: ?>
-            <div class="mb-6">
-                <h2 class="text-center text-xl font-semibold mb-4">Unfiltered Data</h2>
-                <canvas id="chartXY-all"></canvas>
-            </div>
-          <?php endif; ?>
+
+<h1 class="text-center text-2xl font-bold mb-4 w-full">XY Scatter Plot</h1>
+<div class="grid grid-cols-<?php echo !empty($abbrev_data) ? '2' : '1'; ?> gap-4 px-32 max-h-[50rem]">
+    <?php if (!empty($abbrev_data)): ?>
+    <?php foreach ($abbrev_data as $abbrev): ?>
+        <div class="mb-6">
+            <h2 class="text-center text-xl font-semibold mb-4"><?php echo htmlspecialchars($abbrev_map[$abbrev] ?? $abbrev); ?></h2>
+            <canvas id="chartXY-<?php echo htmlspecialchars($abbrev); ?>"></canvas>
         </div>
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const data = <?php echo json_encode($data); ?>;
-            const xTestName = <?php echo json_encode($xTestName); ?>;
-            const yTestName = <?php echo json_encode($yTestName); ?>;
-            
-            <?php if (!empty($abbrev_data)): ?>
-                <?php foreach ($abbrev_data as $abbrev): ?>
-                    new Chart(document.getElementById('chartXY-<?php echo htmlspecialchars($abbrev); ?>').getContext('2d'), {
-                        type: 'scatter',
-                        data: {
-                            datasets: [{
-                                label: xTestName + ' vs. ' + yTestName + ' (<?php echo htmlspecialchars($abbrev_map[$abbrev] ?? $abbrev); ?>)',
-                                data: data[<?php echo json_encode($abbrev); ?>].map(d => ({ x: d.x, y: d.y })),
-                                backgroundColor: 'rgba(192, 192, 75, 0.6)'
-                            }]
-                        },
-                        options: {
-                            scales: {
-                                x: {
-                                    type: 'linear',
-                                    position: 'bottom',
-                                    title: {
-                                        display: true,
-                                        text: xTestName
-                                    }
-                                },
-                                y: {
-                                    type: 'linear',
-                                    title: {
-                                        display: true,
-                                        text: yTestName
-                                    }
-                                }
-                            }
-                        }
-                    });
-                <?php endforeach; ?>
-            <?php else: ?>
-                new Chart(document.getElementById('chartXY-all').getContext('2d'), {
+    <?php endforeach; ?>
+    <?php else: ?>
+    <div class="mb-6">
+        <h2 class="text-center text-xl font-semibold mb-4">Unfiltered Data</h2>
+        <canvas id="chartXY-all"></canvas>
+    </div>
+    <?php endif; ?>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const data = <?php echo json_encode($data); ?>;
+        const xTestName = <?php echo json_encode($xTestName); ?>;
+        const yTestName = <?php echo json_encode($yTestName); ?>;
+        
+        <?php if (!empty($abbrev_data)): ?>
+            <?php foreach ($abbrev_data as $abbrev): ?>
+                new Chart(document.getElementById('chartXY-<?php echo htmlspecialchars($abbrev); ?>').getContext('2d'), {
                     type: 'scatter',
                     data: {
                         datasets: [{
-                            label: xTestName + ' vs. ' + yTestName + ' (Unfiltered Data)',
-                            data: data['all'].map(d => ({ x: d.x, y: d.y })),
+                            label: xTestName + ' vs. ' + yTestName + ' (<?php echo htmlspecialchars($abbrev_map[$abbrev] ?? $abbrev); ?>)',
+                            data: data[<?php echo json_encode($abbrev); ?>].map(d => ({ x: d.x, y: d.y })),
                             backgroundColor: 'rgba(192, 192, 75, 0.6)'
                         }]
                     },
@@ -225,10 +182,37 @@ if (!empty($abbrev_data)) {
                         }
                     }
                 });
-            <?php endif; ?>
-        });
-        </script>
-    </div>
-</div>
-</body>
-</html>
+            <?php endforeach; ?>
+        <?php else: ?>
+            new Chart(document.getElementById('chartXY-all').getContext('2d'), {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: xTestName + ' vs. ' + yTestName + ' (Unfiltered Data)',
+                        data: data['all'].map(d => ({ x: d.x, y: d.y })),
+                        backgroundColor: 'rgba(192, 192, 75, 0.6)'
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: xTestName
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: yTestName
+                            }
+                        }
+                    }
+                }
+            });
+        <?php endif; ?>
+    });
+</script>

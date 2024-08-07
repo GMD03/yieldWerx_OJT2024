@@ -4,7 +4,7 @@
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Dashboard</title>
-   <link rel="stylesheet" href="../src/output.css">
+   <link rel="stylesheet" href="css/output.css">
     <script src="../path/to/flowbite/dist/flowbite.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
@@ -13,13 +13,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-100">
-<?php include('admin_components.php'); ?>
-<div class="p-4 sm:ml-64">
-   <div class="p-4 rounded-lg dark:border-gray-700 mt-14">
-      <div>
-      <?php include('extracted_table.php');?>
+   <?php include('views/navbar.php'); ?>
+   <div class="p-4 w-full">
+      <div class="p-4 rounded-lg dark:border-gray-700 mt-14">
+         <div>
+         <?php include('views/extracted_table.php');?>
+         </div>
       </div>
    </div>
-</div>
 </body>
 </html>
