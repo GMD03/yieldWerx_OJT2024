@@ -11,15 +11,23 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        #chartsContainer {
+            display: grid;
+            grid-gap: 10px;
+            justify-content: center;
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
-<?php include('admin_components.php'); ?>
-<div class="p-4 sm:ml-64">
-   <div class="p-4 rounded-lg dark:border-gray-700 mt-14">
-      <div>
-      <?php include('extracted_table.php');?>
+   <?php include('views/navbar.php'); ?>
+   <div class="p-4 w-full">
+      <div class="p-4 rounded-lg dark:border-gray-700 mt-14">
+         <div>
+         <?php include('views/scatter_plot.php');?>
+         </div>
       </div>
    </div>
-</div>
 </body>
 </html>
