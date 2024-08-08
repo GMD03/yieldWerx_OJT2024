@@ -1,8 +1,5 @@
 <?php
-    require_once('libs/Database.php');
-    
-    $database = new Database();
-    $conn = $database->connect();
+require __DIR__ . '/../connection.php';
 
 header('Content-Type: text/csv');
 header('Content-Disposition: attachment;filename=wafer_data.csv');
