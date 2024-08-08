@@ -112,13 +112,14 @@ $yLabelsJson = json_encode($yLabels);
     const xLabels = <?= $xLabelsJson; ?>;
     const yLabels = <?= $yLabelsJson; ?>;
     const chartsContainer = document.getElementById('chartsContainer');
+    console.log(dataSets);
 
     const numParams = Math.sqrt(dataSets.length);
     chartsContainer.style.gridTemplateColumns = `repeat(${numParams}, 1fr)`;
 
     dataSets.forEach((dataSet, index) => {
         const div = document.createElement('div');
-        div.className = 'chart-container w-1/<?= count($dataSets) ?> max-w-md justify-self-center';
+        div.className = 'chart-container';
         const canvas = document.createElement('canvas');
         canvas.id = `chart-${index}`;
         div.appendChild(canvas);

@@ -60,6 +60,7 @@ if (!empty($abbrev_data)) {
         $abbrev_map[$row['probing_sequence']] = $row['abbrev'];
     }
     sqlsrv_free_stmt($abbrev_stmt);
+    var_dump($abbrev_map);
 
     foreach ($abbrev_data as $abbrev) {
         // Append probing_sequence filter for each abbrev

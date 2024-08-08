@@ -88,4 +88,18 @@
             
             return $options;
         }
+
+        public function getWaferHeaders()
+        {
+            $query = "SELECT TOP(1)* FROM WAFER";
+            
+            $headers = [];
+            $stmt = sqlsrv_query($this->conn, $query);
+            if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                $headers = array_keys($row);
+            }
+            sqlsrv_free_stmt($stmt);
+
+            return $headers;
+        }
     }
