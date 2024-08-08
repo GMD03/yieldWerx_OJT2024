@@ -112,6 +112,7 @@ $yLabelsJson = json_encode($yLabels);
     const xLabels = <?= $xLabelsJson; ?>;
     const yLabels = <?= $yLabelsJson; ?>;
     const chartsContainer = document.getElementById('chartsContainer');
+    console.log(dataSets);
 
     const numParams = Math.sqrt(dataSets.length);
     chartsContainer.style.gridTemplateColumns = `repeat(${numParams}, 1fr)`;

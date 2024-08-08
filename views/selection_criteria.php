@@ -1,23 +1,10 @@
 <?php
-require __DIR__ . '/../connection.php';
+    require_once('controllers/SelectionController.php');
 
-// Query to populate the initial facility options
-$query = "SELECT Facility_ID FROM lot";
-$facilities = [];
-$stmt = sqlsrv_query($conn, $query);
-while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    $facilities[] = $row['Facility_ID'];
-}
-sqlsrv_free_stmt($stmt);
-
-// Query to populate filter options from ProbingSequenceOrder
-$filterQuery = "SELECT abbrev, probing_sequence FROM ProbingSequenceOrder";
-$abbrev = [];
-$filterStmt = sqlsrv_query($conn, $filterQuery);
-while ($row = sqlsrv_fetch_array($filterStmt, SQLSRV_FETCH_ASSOC)) {
-    $abbrev[] = ['abbrev' => $row['abbrev'], 'probing_sequence' => $row['probing_sequence']];
-}
-sqlsrv_free_stmt($filterStmt);
+    $selectionController = new SelectionController();
+    $facilities = $selectionController->getFacilities();
+    $groups = $selectionController->getWaferHeaders();
+    $abbrev = $selectionController->getProbingFilter();
 ?>
 
 <style>
@@ -28,9 +15,10 @@ sqlsrv_free_stmt($filterStmt);
 
 <div class="container mx-auto p-6">
     <h1 class="text-center text-2xl font-bold mb-4 w-full">Selection Criteria</h1>
-    <form action="dashboard.php" method="GET" id="criteriaForm">
-        <div class="flex w-full justify-end items-end">
-            <button id="dropdownSearchButton" data-dropdown-toggle="dropdownSearch" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
+    <form action="table_view.php" method="GET" id="criteriaForm">
+        <div class="flex w-full mb-4 gap-4">
+            
+            <button id="dropdownFilterButton" data-dropdown-toggle="dropdownFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
                 <i class="fa-solid fa-filter"></i>&nbsp;Filter 
                 <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
@@ -38,8 +26,8 @@ sqlsrv_free_stmt($filterStmt);
             </button>
 
             <!-- Dropdown menu -->
-            <div id="dropdownSearch" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
-                <ul class="h-48 px-3 pb-3 overflow-y-auto text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownSearchButton">
+            <div id="dropdownFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
+                <ul class="h-48 px-3 pb-3 overflow-y-auto text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownFilterButton">
                     <li>
                         <div class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600">
                             <input id="select-all" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
@@ -56,6 +44,52 @@ sqlsrv_free_stmt($filterStmt);
                     <?php endforeach; ?>
                 </ul>
             </div>
+            <button id="dropdownGroupXButton" data-dropdown-toggle="dropdownGroupX" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
+                Group By (x) 
+                <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                </svg>
+            </button>
+
+            <!-- Dropdown menu -->
+            <div id="dropdownGroupX" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
+                <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
+                <?php foreach ($groups as $group): ?>
+                    <li>
+                        <div class="flex items-center p-2 rounded hover:bg-gray-100">
+                            <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-x[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                            <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+                </ul>
+            </div>
+
+            <button id="dropdownGroupYButton" data-dropdown-toggle="dropdownGroupY" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
+                Group By (y) 
+                <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                </svg>
+            </button>
+
+            <!-- Dropdown menu -->
+            <div id="dropdownGroupY" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
+                <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupYButton">
+                <?php foreach ($groups as $group): ?>
+                    <li>
+                        <div class="flex items-center p-2 rounded hover:bg-gray-100">
+                            <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-y[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                            <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+                </ul>
+            </div>
+
+        </div>
+        
+        <div class="flex w-full justify-end items-end">
+            
         </div>
 
         <div class="grid grid-cols-3 gap-4 mb-4">
