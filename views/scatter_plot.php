@@ -141,18 +141,38 @@ $yLabelsJson = json_encode($yLabels);
                 maintainAspectRatio: true,
                 scales: {
                     x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        title: {
-                            display: true,
-                            text: xLabels[index]
+                    type: 'linear',
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        text: xLabels[index]
+                    },
+                    ticks: {
+                        // Add this section
+                        beginAtZero: false, // This ensures the range includes 0
+                        suggestedMin: function(suggestedValue) {
+                        return suggestedValue * 0.95; // Decrease suggested minimum by 5%
+                        },
+                        suggestedMax: function(suggestedValue) {
+                        return suggestedValue * 1.05; // Increase suggested maximum by 5%
                         }
+                    }
                     },
                     y: {
-                        title: {
-                            display: true,
-                            text: yLabels[index]
+                    title: {
+                        display: true,
+                        text: yLabels[index]
+                    },
+                    ticks: {
+                        // Add this section (similar to x-axis)
+                        beginAtZero: false,
+                        suggestedMin: function(suggestedValue) {
+                        return suggestedValue * 0.95;
+                        },
+                        suggestedMax: function(suggestedValue) {
+                        return suggestedValue * 1.05;
                         }
+                    }
                     }
                 }
             }
