@@ -5,7 +5,6 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Dashboard</title>
    <link rel="stylesheet" href="css/output.css">
-    <script src="path/to/flowbite/dist/flowbite.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -17,6 +16,40 @@
             display: grid;
             grid-gap: 10px;
             justify-content: center;
+        }
+       .chart-container {
+           overflow: auto;
+           max-width: 100%;
+       }
+       td {
+           padding: 16px;
+       }
+       canvas {
+           height: 400px;
+           width: 450px;
+       }
+       .-rotate-90 {
+            --tw-rotate: -90deg;
+            transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+        }
+        .mt-24 {
+            margin-top: 6rem /* 96px */;
+        }
+        .max-w-fit {
+            max-width: fit-content;
+        }
+        .customize-text-header{
+            margin-top:-28px;
+        }
+
+        .right-4 {
+            right: 2.5rem /* 16px */;
+        }
+        .top-24 {
+            top: 6rem /* 96px */;
+        }
+        .ml-16 {
+            margin-left: 4rem /* 64px */;
         }
     </style>
 </head>

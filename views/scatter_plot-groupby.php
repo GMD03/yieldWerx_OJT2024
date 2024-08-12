@@ -15,10 +15,8 @@ $filters = [
     "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
 ];
 
-$group = [
-    "x" => isset($_GET["group-x"]) ? $_GET["group-x"][0] : '',
-    "y" => isset($_GET["group-y"]) ? $_GET["group-y"][0] : ''
-];
+$xColumn = isset($_GET["group-x"]) ? (($_GET["group-x"][0] === 'Probing_Sequence') ? 'p.abbrev' : 'w.' . $_GET["group-x"][0]) : null;
+$yColumn = isset($_GET["group-y"]) ? (($_GET["group-y"][0] === 'Probing_Sequence') ? 'p.abbrev' : 'w.' . $_GET["group-y"][0]) : null;
 
 // Prepare SQL filters
 $sql_filters = [];
@@ -37,155 +35,354 @@ if (!empty($sql_filters)) {
     $where_clause = 'WHERE ' . implode(' AND ', $sql_filters);
 }
 
-$dataArray = [];
-$xGroupValues = [];
-$yGroupValues = [];
-$ticks = ['x' => ['min' => null, 'max' => null], 'y' => ['min' => null, 'max' => null]];
-$index = 0;
+$sort_clause = '';
+$xy_clauses = [];
+if ($xColumn || $yColumn) {
+    if ($xColumn) {
+        $xy_clauses[] = $xColumn . " " . $_GET["sort-x"];
+    }
+    if ($yColumn) {
+        $xy_clauses[] = $yColumn . " " . $_GET["sort-y"];
+    }
+    $sort_clause = 'ORDER BY ' . implode(', ', $xy_clauses);
+}
 
-if ($group['x'] != '' && $group['y'] != '') {
+// Determine if we are working with one parameter or more
+$isSingleParameter = count($filters['tm.Column_Name']) === 1;
+$parameters = $filters['tm.Column_Name'];
+$data = [];
+$groupedData = [];
+$globalCounters = [
+    'all' => 0,
+    'xcol' => [],
+    'ycol' => []
+];
 
-    $xquery = "SELECT distinct w.". $group['x'] . " FROM WAFER w
-             JOIN DEVICE_1_CP1_V1_0_001 d1 ON w.Wafer_Sequence = d1.Wafer_Sequence
-             JOIN LOT l ON l.Lot_Sequence = w.Lot_Sequence
-             JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
-             JOIN DEVICE_1_CP1_V1_0_002 d2 ON d1.Die_Sequence = d2.Die_Sequence
-             $where_clause
-             ORDER BY w.". $group['x'];
+if ($isSingleParameter) {
+    $parameter = $filters['tm.Column_Name'][0];
+    $xLabel = 'Count';
+    $yLabel = $parameter;
 
-    $stmt = sqlsrv_query($conn, $xquery, $params);
-    if ($stmt === false) { die(print_r(sqlsrv_errors(), true)); }
-    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)){ $xGroupValues[] = $row[$group['x']]; }
-    sqlsrv_free_stmt($stmt);
+    // Fetch the test_name corresponding to yLabel
+    $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
+    $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
+    $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
+    $testNameX = $xLabel;
+    sqlsrv_free_stmt($testNameStmtY);
 
-    $yquery = "SELECT distinct w.". $group['y'] . " FROM WAFER w
-             JOIN DEVICE_1_CP1_V1_0_001 d1 ON w.Wafer_Sequence = d1.Wafer_Sequence
-             JOIN LOT l ON l.Lot_Sequence = w.Lot_Sequence
-             JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
-             JOIN DEVICE_1_CP1_V1_0_002 d2 ON d1.Die_Sequence = d2.Die_Sequence
-             $where_clause
-             ORDER BY w.". $group['y'];
-    
-    $stmt = sqlsrv_query($conn, $yquery, $params);
-    if ($stmt === false) { die(print_r(sqlsrv_errors(), true)); }
-    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)){ $yGroupValues[] = $row[$group['y']]; }
-    sqlsrv_free_stmt($stmt);
+    $tsql = "
+    SELECT 
+        w.Wafer_ID, 
+        d1.{$parameter} AS Y, 
+        " . ($xColumn ? "$xColumn AS xGroup" : "'No xGroup' AS xGroup") . ", 
+        " . ($yColumn ? "$yColumn AS yGroup" : "'No yGroup' AS yGroup") . ",
+        ROW_NUMBER() OVER(PARTITION BY " . ($xColumn ?: "'No xGroup'") . " ORDER BY d1.Die_Sequence) AS row_num
+    FROM DEVICE_1_CP1_V1_0_001 d1
+    JOIN WAFER w ON w.Wafer_Sequence = d1.Wafer_Sequence
+    JOIN LOT l ON l.Lot_Sequence = w.Lot_Sequence
+    JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
+    JOIN DEVICE_1_CP1_V1_0_002 d2 ON d1.Die_Sequence = d2.Die_Sequence
+    JOIN ProbingSequenceOrder p ON p.probing_sequence = w.probing_sequence
+    $where_clause
+    $sort_clause";
+    var_dump($tsql);
 
-    foreach ($yGroupValues as $i => $yGroupValue) {
-        foreach ($xGroupValues as $j => $xGroupValue) {
-            $dataArray[] = ['groupX' => $xGroupValue, 'groupY' => $yGroupValue, 'data' => []];
+    $stmt = sqlsrv_query($conn, $tsql, $params);
+    if ($stmt === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
 
-            $group_where_clause = $where_clause ? 
-                $where_clause . "AND w.{$group['x']} = {$xGroupValue} AND w.{$group['y']} = {$yGroupValue}" :
-                "WHERE w.{$group['x']} = {$xGroupValue} AND w.{$group['y']} = {$yGroupValue}";
-            
-            // Retrieve all records with filters
-            $query = "SELECT l.Facility_ID 'Facility', l.Work_Center 'Work Center', l.Part_Type 'Device Name', l.Program_Name 'Test Program', l.Lot_ID 'Lot ID', l.Test_Temprature 'Lot Test Temprature', w.Wafer_ID 'Wafer ID', w.Wafer_Start_Time 'Wafer Start Time', w.Wafer_Finish_Time 'Wafer Finish Time', d1.Unit_Number 'Unit Number', d1.X , d1.Y, d1.Head_Number 'Head Number', d1.Site_Number 'Site Number', d1.HBin_Number 'Hard Bin No', d1.SBin_Number 'Soft Bin No', d1.Tests_Executed 'Tests Executed', d1.Test_Time 'Test Time (ms)', d1.DieType_Sequence 'Die Type', d1.IsHomeDie 'Home Die', d1.IsAlignmentDie 'Alignment Die', d1.IsIncludeInYield 'Include In Yield', d1.IsIncludeInDieCount 'Include In Die Count', d1.ReticleNumber 'Reticle Number', d1.ReticlePositionRow 'Reticle Position Row', d1.ReticlePositionColumn 'Reticle Position Column', d1.ReticleActiveSitesCount 'Reticle Active Sites Count', d1.ReticleSitePositionRow 'Reticle Site Position Row', d1.ReticleSitePositionColumn 'Reticle Site Position Column', d1.PartNumber 'Part Number', d1.PartName 'Part Name', d1.DieID 'Die ID', d1.DieName 'Die Name', d1.SINF 'SINF', d1.UserDefinedAttribute1 'User Defined Attribute 1', d1.UserDefinedAttribute2 'User Defined Attribute 2', d1.UserDefinedAttribute3 'User Defined Attribute 3', d1.DieStartTime 'Die Start Time', d1.DieEndTime 'Die End Time', d1.{$filters['tm.Column_Name'][0]}, d1.{$filters['tm.Column_Name'][1]} FROM DEVICE_1_CP1_V1_0_001 d1
-                    JOIN WAFER w ON w.Wafer_Sequence = d1.Wafer_Sequence
-                    JOIN LOT l ON l.Lot_Sequence = w.Lot_Sequence
-                    JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
-                    JOIN DEVICE_1_CP1_V1_0_002 d2 ON d1.Die_Sequence = d2.Die_Sequence
-                    JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
-                    $group_where_clause
-                    ORDER BY w.Wafer_ID";
-                    
-            $stmt = sqlsrv_query($conn, $query, $params);
-            if ($stmt === false) { die(print_r(sqlsrv_errors(), true)); }
-            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)){
-                $xValue = $row[$filters['tm.Column_Name'][0]];
-                $yValue = $row[$filters['tm.Column_Name'][1]];
-                if ($xValue != '' && $yValue != '') {
-                    $dataArray[$index]['data'][] = ['x' => $xValue, 'y' => $yValue];
-                
-                    if ($ticks['x']['min'] == null || $xValue < $ticks['x']['min']){
-                        $ticks['x']['min'] = $xValue;
-                    }
-                    if ($ticks['x']['max'] == null || $xValue > $ticks['x']['max']){
-                        $ticks['x']['max'] = $xValue;
-                    }
+    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+        $xGroup = $row['xGroup'];
+        $yGroup = $row['yGroup'];
+        $yValue = floatval($row['Y']);
 
-                    if ($ticks['y']['min'] == null || $yValue < $ticks['y']['min']){
-                        $ticks['y']['min'] = $yValue;
-                    }
-                    if ($ticks['y']['max'] == null || $yValue > $ticks['y']['max']){
-                        $ticks['y']['max'] = $yValue;
-                    }
-                }
-            
+        if ($xColumn && $yColumn) {
+            if (!isset($globalCounters['ycol'][$yGroup][$xGroup])) {
+                $globalCounters['ycol'][$yGroup][$xGroup] = count($groupedData[$yGroup][$xGroup] ?? []) + 1;
+            } else {
+                $globalCounters['ycol'][$yGroup][$xGroup]++;
             }
-            sqlsrv_free_stmt($stmt);
-            $index++;
+            $groupedData[$yGroup][$xGroup][] = ['x' => $globalCounters['ycol'][$yGroup][$xGroup], 'y' => $yValue];
+        } elseif ($xColumn && !$yColumn) {
+            if (!isset($globalCounters['xcol'][$yGroup][$xGroup])) {
+                $globalCounters['xcol'][$yGroup][$xGroup] = count($groupedData[$yGroup][$xGroup] ?? []) + 1;
+            } else {
+                $globalCounters['xcol'][$yGroup][$xGroup]++;
+            }
+            $groupedData[$xGroup][$yGroup][] = ['x' => $globalCounters['xcol'][$yGroup][$xGroup], 'y' => $yValue];
+        } elseif (!$xColumn && $yColumn) {
+
+            if (!isset($globalCounters['ycol'][$yGroup])) {
+                $globalCounters['ycol'][$yGroup] = count($groupedData[$yGroup] ?? []) + 1;
+            } else {
+                $globalCounters['ycol'][$yGroup]++;
+            }
+            $groupedData[$yGroup][] = ['x' => $globalCounters['ycol'][$yGroup], 'y' => $yValue];
+        } else {
+
+            $globalCounters['all']++;
+            $groupedData['all'][] = ['x' => $globalCounters['all'], 'y' => $yValue];
         }
     }
 
+    sqlsrv_free_stmt($stmt);
 }
+else {
+    $combinations = [];
+    foreach ($filters['tm.Column_Name'] as $i => $parameter) {
+        for ($j = $i + 1; $j < count($filters['tm.Column_Name']); $j++) {
+            $combinations[] = [$parameter, $filters['tm.Column_Name'][$j]];
+        }
+    }
 
-$dataArrayJson = json_encode($dataArray);
-$ticksJson = json_encode($ticks);
+    foreach ($combinations as $index => $combination) {
+        $xLabel = $combination[0];
+        $yLabel = $combination[1];
+
+        $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
+        $testNameStmtX = sqlsrv_query($conn, $testNameQuery, [$xLabel]);
+        $testNameX = sqlsrv_fetch_array($testNameStmtX, SQLSRV_FETCH_ASSOC)['test_name'];
+
+        $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
+        $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
+
+        sqlsrv_free_stmt($testNameStmtX);
+        sqlsrv_free_stmt($testNameStmtY);
+
+        $tsql = "
+        SELECT 
+            d1.{$xLabel} AS X, 
+            d1.{$yLabel} AS Y, 
+            " . ($xColumn ? "$xColumn AS xGroup" : "'No xGroup' AS xGroup") . ", 
+            " . ($yColumn ? "$yColumn AS yGroup" : "'No yGroup' AS yGroup") . "
+        FROM DEVICE_1_CP1_V1_0_001 d1
+        JOIN WAFER w ON w.Wafer_Sequence = d1.Wafer_Sequence
+        JOIN LOT l ON l.Lot_Sequence = w.Lot_Sequence
+        JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
+        JOIN DEVICE_1_CP1_V1_0_002 d2 ON d1.Die_Sequence = d2.Die_Sequence
+        JOIN ProbingSequenceOrder p ON p.probing_sequence = w.probing_sequence
+        $where_clause
+        $sort_clause";
+
+        $stmt = sqlsrv_query($conn, $tsql, $params);
+        if ($stmt === false) {
+            die(print_r(sqlsrv_errors(), true));
+        }
+
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $xGroup = $row['xGroup'];
+            $yGroup = $row['yGroup'];
+            $xValue = floatval($row['X']);
+            $yValue = floatval($row['Y']);
+
+            if ($xColumn && $yColumn) {
+                $groupedData[$yGroup][$xGroup][] = ['x' => $xValue, 'y' => $yValue];
+            } elseif ($xColumn && !$yColumn) {
+                $groupedData[$xGroup][$yGroup][] = ['x' => $xValue, 'y' => $yValue];
+            } elseif (!$xColumn && $yColumn) {
+                $groupedData[$yGroup][] = ['x' => $xValue, 'y' => $yValue];
+            } else {
+                $groupedData['all'][] = ['x' => $xValue, 'y' => $yValue];
+            }
+        }
+
+        sqlsrv_free_stmt($stmt);
+    }
+}
+$numDistinctGroups = count($groupedData);
 
 ?>
 
-<h1 class="text-center text-4xl font-semibold mb-4">XY Scatter Plots</h1>
-<div id="chartsContainer"></div>
+<div class="fixed top-24 right-4">
+    <div class="flex w-full justify-center items-center gap-2">
+    <!-- Probe Count Button and Dropdown -->
+    <button id="dropdownRangeMarginButton" data-dropdown-toggle="dropdownRangeMargin" class="inline-flex items-center px-4 py-3 text-sm font-medium text-center text-white bg-blue-700 rounded-lg focus:ring-4 focus:outline-none focus:ring-blue-300" type="button">
+        <i class="fa-solid fa-gear"></i>
+    </button>
+
+    <!-- Probe Count Dropdown menu -->
+    <div id="dropdownRangeMargin" class="z-10 hidden bg-white rounded-lg shadow w-60">
+        <ul class="h-auto px-3 pb-3 overflow-y-auto text-sm text-gray-700" aria-labelledby="dropdownSearchButtonProbe">
+            <li>
+                <div class="flex items-center justify-start p-2 rounded">
+                <span class="text-md font-semibold">Settings</span>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center justify-center p-2 rounded hover:bg-gray-100">
+                <div class="flex flex-col items-end w-full">
+                <label for="marginRange" class="text-md font-semibold mb-2">Adjust Range Margin (%)</label>
+                <input type="range" id="marginRange" min="0" max="100" value="10" step="1" class="w-48 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                <span id="rangeValue" class="text-sm font-semibold mt-2">5%</span>
+                </div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+</div>
+<?php
+if(!$isSingleParameter){
+echo '<h1 class="text-center text-2xl font-bold w-full mb-6">XY Scatter Plot</h1>';
+foreach ($combinations as $index => $combination) {
+    $xLabel = $combination[0];
+    $yLabel = $combination[1];
+
+    $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
+    $testNameStmtX = sqlsrv_query($conn, $testNameQuery, [$xLabel]);
+    $testNameX = sqlsrv_fetch_array($testNameStmtX, SQLSRV_FETCH_ASSOC)['test_name'];
+
+    $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
+    $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
+
+    sqlsrv_free_stmt($testNameStmtX);
+    sqlsrv_free_stmt($testNameStmtY);
+
+?>
+<!-- Iterate this layout -->
+<div class="p-4">
+    <div class="dark:border-gray-700 flex flex-col items-center">
+        <div class="max-w-fit p-6 border-b-2 border-2">
+            <div class="mb-4 text-sm italic">
+                <?php 
+                echo 'Combination of <b>' . $testNameX . '</b> and <b>' . $testNameY . '</b>';
+                ?>
+            </div>
+            <?php
+            if (isset($xColumn) && isset($yColumn)) {
+                // Both X and Y parameters are set
+                $yGroupKeys = array_keys($groupedData);
+                $lastYGroup = end($yGroupKeys);
+                foreach ($groupedData as $yGroup => $xGroupData) {
+                    echo '<div class="flex flex-row items-center justify-center w-full">';
+                    echo '<div><h2 class="text-center text-xl font-semibold mb-4 -rotate-90">' . $yGroup . '</h2></div>';
+                    echo '<div class="grid gap-2 grid-cols-' . count($xGroupData) . '">';
+
+                    foreach ($xGroupData as $xGroup => $data) {
+                        echo '<div class="flex items-center justify-center flex-col">';
+                        echo '<canvas id="chartXY_' . $yGroup . '_' . $xGroup . '"></canvas>';
+                        if ($yGroup === $lastYGroup) {
+                            echo '<h3 class="text-center text-lg font-semibold">' . $xGroup . '</h3>';
+                        }
+                        echo '</div>';
+                    }
+                    echo '</div></div>';
+                }
+            } elseif (isset($xColumn) && !isset($yColumn)) {
+                // Only X parameter is set
+                echo '<div class="flex flex-row items-center justify-center w-full">';
+                echo '<div class="grid gap-2 grid-cols-' . $numDistinctGroups . '">';
+                foreach ($groupedData as $xGroup => $data) {
+                    echo '<div class="flex items-center justify-center flex-col">';
+                    echo '<canvas id="chartXY_' . $xGroup . '"></canvas>';
+                    echo '<h3 class="text-center text-lg font-semibold">' . $xGroup . '</h3></div>';
+                }
+                echo '</div></div>';
+            } elseif (!isset($xColumn) && isset($yColumn)) {
+                // Only Y parameter is set
+                echo '<div class="flex flex-row items-center justify-center w-full">';
+                echo '<div class="grid gap-2 grid-cols-1">';
+                foreach ($groupedData as $yGroup => $data) {
+                    echo '<div class="flex flex-row justify-center items-center">';
+                    echo '<div class="text-center">
+                        <h2 class="text-center text-xl font-semibold mb-4 -rotate-90">' . $yGroup . '</h2></div>';
+                    echo '<canvas id="chartXY_' . $yGroup . '"></canvas>';
+                    echo '</div>';
+                }
+                echo '</div></div>';
+            } else {
+                // Neither X nor Y parameters are set
+                echo '<div class="flex items-center justify-center w-full">';
+                echo '<div><canvas id="chartXY_all"></canvas></div>';
+                echo '</div>';
+            }
+            ?>
+        </div>
+    </div>
+</div>
+<!-- Iterate until here -->
+<?php
+    }
+} else { ?>
+<h1 class="text-center text-2xl font-bold w-full mb-6">XY Line Chart</h1>
+ <div class="p-4">
+    <div class="dark:border-gray-700 flex flex-col items-center">
+        <div class="max-w-fit p-6 border-b-2 border-2">
+            <div class="mb-4 text-sm italic">
+                <?php 
+                echo 'Combination of <b>' . $testNameX . '</b>';
+                echo ' and <b>' . $testNameY . '</b>';
+                ?>
+            </div>
+            <?php
+            if (isset($xColumn) && isset($yColumn)) {
+                // Both X and Y parameters are set
+                $yGroupKeys = array_keys($groupedData);
+                $lastYGroup = end($yGroupKeys);
+                foreach ($groupedData as $yGroup => $xGroupData) {
+                    echo '<div class="flex flex-row items-center justify-center w-full">';
+                    echo '<div><h2 class="text-center text-xl font-semibold mb-4 -rotate-90">' . $yGroup . '</h2></div>';
+                    echo '<div class="grid gap-2 grid-cols-' . count($xGroupData) . '">';
+
+                    foreach ($xGroupData as $xGroup => $data) {
+                        echo '<div class="flex items-center justify-center flex-col">';
+                        echo '<canvas id="chartXY_' . $yGroup . '_' . $xGroup . '"></canvas>';
+                        if ($yGroup === $lastYGroup) {
+                            echo '<h3 class="text-center text-lg font-semibold">' . $xGroup . '</h3>';
+                        }
+                        echo '</div>';
+                    }
+                    echo '</div></div>';
+                }
+            } elseif (isset($xColumn) && !isset($yColumn)) {
+                // Only X parameter is set
+                echo '<div class="flex flex-row items-center justify-center w-full">';
+                echo '<div class="grid gap-2 grid-cols-' . $numDistinctGroups . '">';
+                foreach ($groupedData as $xGroup => $data) {
+                    echo '<div class="flex items-center justify-center flex-col">';
+                    echo '<canvas id="chartXY_' . $xGroup . '"></canvas>';
+                    echo '<h3 class="text-center text-lg font-semibold">' . $xGroup . '</h3></div>';
+                }
+                echo '</div></div>';
+            } elseif (!isset($xColumn) && isset($yColumn)) {
+                // Only Y parameter is set
+                echo '<div class="flex flex-row items-center justify-center w-full">';
+                echo '<div class="grid gap-2 grid-cols-1">';
+                foreach ($groupedData as $yGroup => $data) {
+                    echo '<div class="flex flex-row justify-center items-center">';
+                    echo '<div class="text-center">
+                        <h2 class="text-center text-xl font-semibold mb-4 -rotate-90">' . $yGroup . '</h2></div>';
+                    echo '<canvas id="chartXY_' . $yGroup . '"></canvas>';
+                    echo '</div>';
+                }
+                echo '</div></div>';
+            } else {
+                // Neither X nor Y parameters are set
+                echo '<div class="flex items-center justify-center w-full">';
+                echo '<div><canvas id="chartXY_all"></canvas></div>';
+                echo '</div>';
+            }
+            ?>
+        </div>
+    </div>
+</div>
+<?php }
+?>
 
 <script>
-    const dataArray = <?= $dataArrayJson; ?>;
-    const ticks = <?= $ticksJson; ?>;
-    const chartsContainer = document.getElementById('chartsContainer');
-    console.log(dataArray);
-    
-    // const numParams = Math.sqrt(dataSets.length);
-    chartsContainer.style.gridTemplateColumns = `repeat(<?= count($xGroupValues); ?>, 1fr)`;
+    const groupedData = <?php echo json_encode($groupedData); ?>;
+    const xLabel = '<?php echo $testNameX; ?>';
+    const yLabel = '<?php echo $testNameY; ?>';
+    const xColumn = <?php echo json_encode($xColumn); ?>;
+    const yColumn = <?php echo json_encode($yColumn); ?>;
+    const hasXColumn = <?php echo json_encode(isset($xColumn)); ?>;
+    const hasYColumn = <?php echo json_encode(isset($yColumn)); ?>;
+    const isSingleParameter = <?php echo json_encode($isSingleParameter); ?>;
+    console.log(groupedData);
 
-    dataArray.forEach((array, index) => {
-        const div = document.createElement('div');
-        div.className = 'chart-container';
-        const canvas = document.createElement('canvas');
-        canvas.id = `chart-${index}`;
-        div.appendChild(canvas);
-        chartsContainer.appendChild(div);
-
-        new Chart(canvas, {
-            type: 'scatter',
-            data: {
-                datasets: [{
-                    data: array.data,
-                    backgroundColor: 'rgba(115, 33, 98, 0.6)',
-                    borderColor: 'rgba(82, 16, 69, 1)',
-                    pointRadius: 2,
-                    showLine: false
-                }]
-            },
-            options: {
-                maintainAspectRatio: true,
-                plugins:{
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: {
-                        position: 'bottom',
-                        title: {
-                            display: true,
-                            text: array.groupX
-                        },
-                        min: ticks.x.min,
-                        max: ticks.x.max
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: array.groupY
-                        },
-                        min: ticks.y.min,
-                        max: ticks.y.max
-                    }
-                }
-            }
-        });
-    });
 </script>
+<script src="src/js/chart_dynamic.js"></script>
 <?php
 sqlsrv_close($conn);
 ?>
