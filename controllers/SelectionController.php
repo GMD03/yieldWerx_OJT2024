@@ -11,7 +11,7 @@
 
         public function getFacilities() 
         {
-            $query = "SELECT Facility_ID FROM LOT";
+            $query = "SELECT distinct Facility_ID FROM LOT";
 
             $facilities = [];
             $stmt = sqlsrv_query($this->conn, $query);
@@ -39,34 +39,45 @@
 
         public function getOptions($type, $value)
         {
+            $filters = json_decode($value, true);
+
+            $where_clause = '';
+            $sql_filters = [];
+            foreach ($filters as $key => $value) {
+                if ($value) {
+                    $sql_filters[] = (($key === 'Program_Name') ? "lot.$key" : $key) . " IN ('" . implode("','", $value) . "') ";
+                }
+            }
+            if (!empty($sql_filters)) {
+                $where_clause = 'WHERE ' . implode(' AND ', $sql_filters);
+            }
+            
             switch ($type) {
                 case 'work_center':
-                    $query = "SELECT Work_Center FROM lot WHERE Facility_ID IN ('" . implode("','", $value) . "')";
+                    $query = "SELECT distinct Work_Center FROM lot $where_clause";
                     break;
                 case 'device_name':
-                    $query = "SELECT Part_Type FROM lot WHERE Work_Center IN ('" . implode("','", $value) . "')";
+                    $query = "SELECT distinct Part_Type FROM lot $where_clause";
                     break;
                 case 'test_program':
-                    $query = "SELECT Program_Name FROM lot WHERE Part_Type IN ('" . implode("','", $value) . "')";
+                    $query = "SELECT distinct Program_Name FROM lot $where_clause";
                     break;
                 case 'lot':
-                    $query = "SELECT Lot_ID FROM lot WHERE Program_Name IN ('" . implode("','", $value) . "')";
+                    $query = "SELECT distinct Lot_ID FROM lot $where_clause";
                     break;
                 case 'wafer':
-                    $query = "SELECT wafer.Wafer_ID FROM wafer
+                    $query = "SELECT distinct wafer.Wafer_ID FROM wafer
                     JOIN lot ON lot.Lot_Sequence = wafer.Lot_Sequence
-                    JOIN ProbingSequenceOrder p on p.probing_sequence = wafer.probing_sequence
-                    WHERE lot.Lot_ID IN ('" . implode("','", $value) . "')
+                    $where_clause
                     GROUP BY wafer.Wafer_ID
                     ORDER BY wafer.wafer_ID ";
                     break;
                 case 'parameter':
                     $query = "SELECT DISTINCT tm.Column_Name, tm.Test_Name, Test_Number
                               FROM TEST_PARAM_MAP tm 
+                                JOIN lot ON lot.Lot_Sequence = tm.Lot_Sequence
                               JOIN wafer ON wafer.Lot_Sequence = tm.Lot_Sequence 
-                              WHERE wafer.Wafer_ID IN ('" . implode("','", $value) . "') 
-                              AND tm.Column_Name LIKE 'T%' 
-                              AND CAST(SUBSTRING(tm.Column_Name, 2, LEN(tm.Column_Name) - 1) AS INT) BETWEEN 1 AND 1000
+                              $where_clause
                               ORDER BY Test_Number ASC";
                     break;
                 default:

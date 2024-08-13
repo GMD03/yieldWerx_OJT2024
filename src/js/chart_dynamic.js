@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     data: data,
                     backgroundColor: 'rgba(115, 33, 98, 0.6)',
                     borderColor: 'rgba(82, 16, 69, 1)',
-                    borderWidth: 2,
+                    borderWidth: 1,
                     fill: false,
                     pointRadius: 1,
                 }]
