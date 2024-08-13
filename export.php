@@ -38,22 +38,46 @@ if (!empty($sql_filters)) {
     $where_clause = 'WHERE ' . implode(' AND ', $sql_filters);
 }
 
+$join_table_clause = '';
+
+// get the corresponding table names
+$query = "SELECT distinct tm.Table_Name FROM LOT l
+            JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
+            JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
+            $where_clause";
+
+$stmt = sqlsrv_query($conn, $query, $params);
+if ($stmt === false) { die('Query failed: ' . print_r(sqlsrv_errors(), true)); }
+$tables = [];
+while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $tables[] = $row['Table_Name']; }
+sqlsrv_free_stmt($stmt); // Free the count statement here    
+
+$joins = [];
+for ($i = 0; $i < count($tables); $i++) {
+    if ($i === 0) {
+        // For the first table, use a base join
+        $joins[] = "JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Wafer_Sequence = w.Wafer_Sequence";
+    } else {
+        // For subsequent tables, join with the previous table
+        $joins[] = "JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Die_Sequence = " . $tables[$i - 1] . ".Die_Sequence";
+    }
+}
+
+if (!empty($joins)) {
+    $join_table_clause = implode("\n", $joins);
+}
+
 // Dynamically construct the column part of the SQL query
-$column_list = !empty($filters['tm.Column_Name']) ? implode(', ', array_map(function($col) { return "d1.$col"; }, $filters['tm.Column_Name'])) : '*';
+$column_list = !empty($filters['tm.Column_Name']) ? implode(', ',  $filters['tm.Column_Name']) : '*';
 
 // Fetch all data from the query
-$tsql = "SELECT l.Facility_ID, l.Work_Center, l.Part_Type, l.Program_Name, l.Test_Temprature, l.Lot_ID,
-                w.Wafer_ID, w.Wafer_Start_Time, w.Wafer_Finish_Time, d1.Unit_Number, d1.X, d1.Y, d1.Head_Number,
-                d1.Site_Number, d1.HBin_Number, d1.SBin_Number, d1.Tests_Executed, d1.Test_Time,
-                tm.Column_Name, tm.Test_Name, $column_list
-         FROM DEVICE_1_CP1_V1_0_001 d1
-         JOIN WAFER w ON w.Wafer_Sequence = d1.Wafer_Sequence
-         JOIN LOT l ON l.Lot_Sequence = w.Lot_Sequence
-         JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
-         JOIN DEVICE_1_CP1_V1_0_002 d2 ON d1.Die_Sequence = d2.Die_Sequence
-         JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
-         $where_clause
-         ORDER BY w.Wafer_ID";
+$tsql = "SELECT l.Facility_ID 'Facility', l.Work_Center 'Work Center', l.Part_Type 'Device Name', l.Program_Name 'Test Program', l.Lot_ID 'Lot ID', l.Test_Temprature 'Lot Test Temprature', w.Wafer_ID 'Wafer ID', w.Wafer_Start_Time 'Wafer Start Time', w.Wafer_Finish_Time 'Wafer Finish Time', Unit_Number 'Unit Number', X , Y, Head_Number 'Head Number', Site_Number 'Site Number', HBin_Number 'Hard Bin No', SBin_Number 'Soft Bin No', Tests_Executed 'Tests Executed', Test_Time 'Test Time (ms)', DieType_Sequence 'Die Type', IsHomeDie 'Home Die', IsAlignmentDie 'Alignment Die', IsIncludeInYield 'Include In Yield', IsIncludeInDieCount 'Include In Die Count', ReticleNumber 'Reticle Number', ReticlePositionRow 'Reticle Position Row', ReticlePositionColumn 'Reticle Position Column', ReticleActiveSitesCount 'Reticle Active Sites Count', ReticleSitePositionRow 'Reticle Site Position Row', ReticleSitePositionColumn 'Reticle Site Position Column', PartNumber 'Part Number', PartName 'Part Name', DieID 'Die ID', DieName 'Die Name', SINF 'SINF', UserDefinedAttribute1 'User Defined Attribute 1', UserDefinedAttribute2 'User Defined Attribute 2', UserDefinedAttribute3 'User Defined Attribute 3', DieStartTime 'Die Start Time', DieEndTime 'Die End Time', $column_list FROM LOT l
+        JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
+        JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
+        JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
+        $join_table_clause
+        $where_clause
+        ORDER BY l.Lot_ID, w.Wafer_ID";
 
 $stmt = sqlsrv_query($conn, $tsql, $params);
 
@@ -70,12 +94,9 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 }
 sqlsrv_free_stmt($stmt);
 
+
 // Merge static columns with dynamic columns and replace with test names
-$columns = [
-    'Facility_ID', 'Work_Center', 'Part_Type', 'Program_Name', 'Test_Temprature', 'Lot_ID', 'Wafer_ID',
-    'Wafer_Start_Time', 'Wafer_Finish_Time', 'Unit_Number', 'X', 'Y', 'Head_Number', 'Site_Number',
-    'HBin_Number', 'SBin_Number', 'Tests_Executed', 'Test_Time'
-];
+$columns = ['Facility', 'Work Center', 'Device Name', 'Test Program', 'Lot ID', 'Lot Test Temprature', 'Wafer ID', 'Wafer Start Time', 'Wafer Finish Time', 'Unit Number', 'Head Number', 'Site Number', 'Hard Bin No', 'Soft Bin No', 'Tests Executed', 'Test Time (ms)', 'Die Type', 'Home Die', 'Alignment Die', 'Include In Yield', 'Include In Die Count', 'Reticle Number', 'Reticle Position Row', 'Reticle Position Column', 'Reticle Active Sites Count', 'Reticle Site Position Row', 'Reticle Site Position Column', 'Part Number', 'Part Name', 'Die ID', 'Die Name', 'SINF', 'User Defined Attribute 1', 'User Defined Attribute 2', 'User Defined Attribute 3', 'Die Start Time', 'Die End Time'];
 $all_columns = array_merge($columns, $filters['tm.Column_Name']);
 $headers = array_map(function($column) use ($column_to_test_name_map) {
     return isset($column_to_test_name_map[$column]) ? $column_to_test_name_map[$column] : $column;
@@ -103,4 +124,3 @@ fclose($output);
 
 sqlsrv_free_stmt($stmt);
 sqlsrv_close($conn);
-?>

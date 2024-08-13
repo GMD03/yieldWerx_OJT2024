@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Dashboard</title>
+   <title>Chart</title>
    <link rel="stylesheet" href="css/output.css">
     <link href="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
@@ -54,13 +54,21 @@
     </style>
 </head>
 <body class="bg-gray-100">
-   <?php include('views/navbar.php'); ?>
-   <div class="p-4 w-full">
-      <div class="p-4 rounded-lg dark:border-gray-700 mt-14">
-         <div>
-         <?php include('views/scatter_plot-groupby.php');?>
-         </div>
-      </div>
-   </div>
+    <?php include('views/navbar.php'); ?>
+    <div class="p-4 w-full">
+        <div class="p-4 rounded-lg dark:border-gray-700 mt-14">
+            <div>
+            <?php
+            if (isset($_GET["type"]) && $_GET['type'] === "line") {
+                include('views/line_chart.php');
+            }
+            else {
+                include('views/scatter_plot-groupby.php');
+            }
+            
+            ?>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

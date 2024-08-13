@@ -111,11 +111,11 @@
                 <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Type of Chart</h2>
                 <div class="flex flex-col w-full justify-start items-center gap-2">
                     <div class="flex items-center">
-                        <input id="radio-1" type="radio" value="line" name="chart_type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                        <input id="radio-1" type="radio" value="line" name="type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
                         <label for="radio-1" class="ms-2 text-sm font-medium text-gray-900">Line</label>
                     </div>
                     <div class="flex items-center">
-                        <input id="radio-2" type="radio" value="scatter" name="chart_type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                        <input id="radio-2" type="radio" value="scatter" name="type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
                         <label for="radio-2" class="ms-2 text-sm font-medium text-gray-900">Scatter</label>
                     </div>
                 </div>
@@ -201,11 +201,12 @@ $(document).ready(function() {
             url: 'fetch_options.php',
             method: 'GET',
             data: {
-                value: selectedValue,
+                value: JSON.stringify(selectedValue),
                 type: queryType
             },
             dataType: 'json',
             success: function(response) {
+                console.log(response);
                 let options = '';
                 if (queryType === 'parameter') {
                     $.each(response, function(index, item) {
@@ -217,39 +218,64 @@ $(document).ready(function() {
                     });
                 }
                 targetElement.html(options);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', status, error);
+                console.log('Response Text:', xhr.responseText);
             }
         });
     }
+    
+    const selectedValues = {
+        Facility_ID: null,
+        Work_Center: null,
+        Part_Type: null,
+        Program_Name: null,
+        Lot_ID: null,
+        Wafer_ID: null
+    };
 
     // Event listeners for each select element
     $('#facility').change(function() {
         const selectedFacility = $(this).val();
-        fetchOptions(selectedFacility, $('#work_center'), 'work_center');
+        selectedValues.Facility_ID = selectedFacility;
+        console.log(selectedValues);
+        fetchOptions(selectedValues, $('#work_center'), 'work_center');
     });
 
     $('#work_center').change(function() {
         const selectedWorkCenter = $(this).val();
-        fetchOptions(selectedWorkCenter, $('#device_name'), 'device_name');
+        selectedValues.Work_Center = selectedWorkCenter;
+        console.log(selectedValues);
+        fetchOptions(selectedValues, $('#device_name'), 'device_name');
     });
 
     $('#device_name').change(function() {
         const selectedDeviceName = $(this).val();
-        fetchOptions(selectedDeviceName, $('#test_program'), 'test_program');
+        selectedValues.Part_Type = selectedDeviceName;
+        console.log(selectedValues);
+        fetchOptions(selectedValues, $('#test_program'), 'test_program');
     });
 
     $('#test_program').change(function() {
         const selectedTestProgram = $(this).val();
-        fetchOptions(selectedTestProgram, $('#lot'), 'lot');
+        selectedValues.Program_Name = selectedTestProgram;
+        console.log(selectedValues);
+        fetchOptions(selectedValues, $('#lot'), 'lot');
     });
 
     $('#lot').change(function() {
         const selectedLot = $(this).val();
-        fetchOptions(selectedLot, $('#wafer'), 'wafer');
+        selectedValues.Lot_ID = selectedLot;
+        console.log(selectedValues);
+        fetchOptions(selectedValues, $('#wafer'), 'wafer');
     });
 
     $('#wafer').change(function() {
         const selectedWafer = $(this).val();
-        fetchOptions(selectedWafer, $('#parameter'), 'parameter');
+        selectedValues.Wafer_ID = selectedWafer;
+        console.log(selectedValues);
+        fetchOptions(selectedValues, $('#parameter'), 'parameter');
     });
 
     // Reset button functionality
