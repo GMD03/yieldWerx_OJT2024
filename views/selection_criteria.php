@@ -12,100 +12,226 @@
     <form action="table_view.php" method="GET" id="criteriaForm">
         <div class="flex flex-row w-full mb-4 gap-4">
             
-            <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
-                <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Filter</h2>
-                <div class="flex w-full justify-start items-center gap-2">
-                    <button id="dropdownFilterButton" data-dropdown-toggle="dropdownFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
-                        Probing Sequence
-                        <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                        </svg>
-                    </button>
+        <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
+            <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Filter</h2>
 
-                    <!-- Dropdown menu -->
-                    <div id="dropdownFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
-                        <ul class="h-48 px-3 pb-3 overflow-y-auto text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownFilterButton">
-                            <li>
-                                <div class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600">
-                                    <input id="select-all" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
-                                    <label for="select-all" class="w-full ms-2 text-sm font-medium text-gray-900 rounded dark:text-gray-300">Select All</label>
-                                </div>
-                            </li>
-                            <?php foreach ($abbrev as $item): ?>
-                            <li>
-                                <div class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600">
-                                    <input id="checkbox-item-<?= htmlspecialchars($item['abbrev']) ?>" name="abbrev[]" type="checkbox" value="<?= htmlspecialchars($item['probing_sequence']) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500 filter-checkbox">
-                                    <label for="checkbox-item-<?= htmlspecialchars($item['abbrev']) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded dark:text-gray-300"><?= htmlspecialchars($item['abbrev']) ?></label>
-                                </div>
-                            </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
+            <!-- Dropdown menu -->
+            <div class="flex w-full justify-start items-center gap-2 mb-4">
+                <button id="dropdownFilterButton" data-dropdown-toggle="dropdownFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
+                    Probing Sequence
+                    <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                    </svg>
+                </button>
+
+                <div id="dropdownFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
+                    <ul class="h-48 px-3 pb-3 overflow-y-auto text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownFilterButton">
+                        <li>
+                            <div class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600">
+                                <input id="select-all" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
+                                <label for="select-all" class="w-full ms-2 text-sm font-medium text-gray-900 rounded dark:text-gray-300">Select All</label>
+                            </div>
+                        </li>
+                        <?php foreach ($abbrev as $item): ?>
+                        <li>
+                            <div class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600">
+                                <input id="checkbox-item-<?= htmlspecialchars($item['abbrev']) ?>" name="abbrev[]" type="checkbox" value="<?= htmlspecialchars($item['probing_sequence']) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500 filter-checkbox">
+                                <label for="checkbox-item-<?= htmlspecialchars($item['abbrev']) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded dark:text-gray-300"><?= htmlspecialchars($item['abbrev']) ?></label>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
             </div>
+
+    <!-- Selected filters display -->
+    <div id="selectedFilters" class="text-gray-600 dark:text-gray-300">
+        <span class="font-medium">Selected Filters:</span>
+        <div id="selectedFiltersContainer" class="mt-2 flex space-x-2 overflow-x-auto">
+            <!-- Selected filters will be dynamically inserted here -->
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dropdownFilter = document.getElementById('dropdownFilter');
+    const selectedFiltersContainer = document.getElementById('selectedFiltersContainer');
+
+    function updateSelectedFilters() {
+        const selectedFilters = document.querySelectorAll('.filter-checkbox:checked');
+        selectedFiltersContainer.innerHTML = ''; // Clear current list
+        selectedFilters.forEach(checkbox => {
+            const listItem = document.createElement('div');
+            listItem.className = 'flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-600 rounded';
+            listItem.textContent = checkbox.nextElementSibling.textContent;
+            selectedFiltersContainer.appendChild(listItem);
+        });
+    }
+
+    // Toggle dropdown visibility
+    document.getElementById('dropdownFilterButton').addEventListener('click', function () {
+        dropdownFilter.classList.toggle('hidden');
+    });
+
+    // Update selected filters on checkbox change
+    document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedFilters);
+    });
+
+    // Select all functionality
+    document.getElementById('select-all').addEventListener('change', function () {
+        const isChecked = this.checked;
+        document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+        updateSelectedFilters();
+    });
+});
+</script>
+
             
-            <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
-                <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Group by (x)</h2>
-                <div class="flex w-full justify-start items-center gap-2">
-                    <button id="dropdownGroupXButton" data-dropdown-toggle="dropdownGroupX" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
-                        X Axis
-                        <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                        </svg>
-                    </button>
+<div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
+    <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Group by (x)</h2>
 
-                    <!-- Dropdown menu -->
-                    <div id="dropdownGroupX" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
-                        <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
-                        <?php foreach ($groups as $group): ?>
-                            <li>
-                                <div class="flex items-center p-2 rounded hover:bg-gray-100">
-                                    <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-x[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
-                                    <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
-                                </div>
-                            </li>
-                        <?php endforeach; ?>
-                        </ul>
+    <!-- Dropdown menu -->
+    <div class="flex w-full justify-start items-center gap-2 mb-4">
+        <button id="dropdownGroupXButton" data-dropdown-toggle="dropdownGroupX" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
+            X Axis
+            <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+            </svg>
+        </button>
+
+        <div id="dropdownGroupX" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
+            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
+                <?php foreach ($groups as $group): ?>
+                <li>
+                    <div class="flex items-center p-2 rounded hover:bg-gray-100">
+                        <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-x[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                        <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
                     </div>
-                    
-                    <label for="sort-x" class="sr-only">Sort X</label>
-                    <select id="sort-x" name="sort-x" class="block py-2.5 px-4 text-sm text-gray-500 bg-transparent border-0 border-b-2 border-gray-200 appearance-none focus:outline-none focus:ring-0 focus:border-gray-200 peer ml-auto">
-                        <option value="ASC" selected>Ascending</option>
-                        <option value="DESC">Descending</option>  
-                    </select>
-                </div>
-            </div>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
 
-            <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
-                <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Group by (y)</h2>
-                <div class="flex w-full justify-start items-center gap-2">
-                    <button id="dropdownGroupYButton" data-dropdown-toggle="dropdownGroupY" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
-                        Y Axis
-                        <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                        </svg>
-                    </button>
+        <!-- Select input for sorting -->
+        <label for="sort-x" class="sr-only">Sort X</label>
+        <select id="sort-x" name="sort-x" class="block py-2.5 px-4 text-sm text-gray-500 bg-transparent border-0 border-b-2 border-gray-200 appearance-none focus:outline-none focus:ring-0 focus:border-gray-200 peer ml-auto">
+            <option value="ASC" selected>Ascending</option>
+            <option value="DESC">Descending</option>  
+        </select>
+    </div>
 
-                    <!-- Dropdown menu -->
-                    <div id="dropdownGroupY" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
-                        <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupYButton">
-                        <?php foreach ($groups as $group): ?>
-                            <li>
-                                <div class="flex items-center p-2 rounded hover:bg-gray-100">
-                                    <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-y[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
-                                    <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
-                                </div>
-                            </li>
-                        <?php endforeach; ?>
-                        </ul>
+    <!-- Selected group display -->
+    <div id="selectedGroup" class="text-gray-600 dark:text-gray-300 mt-4">
+        <span class="font-medium">Selected Group:</span>
+        <div id="selectedGroupContainer" class="mt-2 flex space-x-2 overflow-x-auto">
+            <!-- Selected group will be dynamically inserted here -->
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dropdownGroupX = document.getElementById('dropdownGroupX');
+    const selectedGroupContainer = document.getElementById('selectedGroupContainer');
+
+    function updateSelectedGroup() {
+        const selectedGroup = document.querySelector('input[name="group-x[]"]:checked');
+        selectedGroupContainer.innerHTML = ''; // Clear current display
+        if (selectedGroup) {
+            const listItem = document.createElement('div');
+            listItem.className = 'flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-600 rounded';
+            listItem.textContent = selectedGroup.nextElementSibling.textContent;
+            selectedGroupContainer.appendChild(listItem);
+        }
+    }
+
+    // Toggle dropdown visibility
+    document.getElementById('dropdownGroupXButton').addEventListener('click', function () {
+        dropdownGroupX.classList.toggle('hidden');
+    });
+
+    // Update selected group on radio button change
+    document.querySelectorAll('input[name="group-x[]"]').forEach(radio => {
+        radio.addEventListener('change', updateSelectedGroup);
+    });
+});
+</script>
+
+
+<div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
+    <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Group by (y)</h2>
+
+    <!-- Dropdown menu and sort selection -->
+    <div class="flex w-full justify-start items-center gap-2 mb-4">
+        <button id="dropdownGroupYButton" data-dropdown-toggle="dropdownGroupY" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
+            Y Axis
+            <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+            </svg>
+        </button>
+
+        <!-- Dropdown menu -->
+        <div id="dropdownGroupY" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
+            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupYButton">
+                <?php foreach ($groups as $group): ?>
+                <li>
+                    <div class="flex items-center p-2 rounded hover:bg-gray-100">
+                        <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-y[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                        <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
                     </div>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
 
-                    <select id="sort-y" name="sort-y" class="block py-2.5 px-4 text-sm text-gray-500 bg-transparent border-0 border-b-2 border-gray-200 appearance-none focus:outline-none focus:ring-0 focus:border-gray-200 peer">
-                        <option value="ASC" selected>Ascending</option>
-                        <option value="DESC">Descending</option>  
-                    </select>
-                </div>
-            </div>
+        <!-- Select input for sorting -->
+        <select id="sort-y" name="sort-y" class="block py-2.5 px-4 text-sm text-gray-500 bg-transparent border-0 border-b-2 border-gray-200 appearance-none focus:outline-none focus:ring-0 focus:border-gray-200 peer ml-auto">
+            <option value="ASC" selected>Ascending</option>
+            <option value="DESC">Descending</option>  
+        </select>
+    </div>
+
+    <!-- Selected group display -->
+    <div id="selectedGroupY" class="text-gray-600 dark:text-gray-300 mt-4">
+        <span class="font-medium">Selected Group:</span>
+        <div id="selectedGroupYContainer" class="mt-2 flex space-x-2 overflow-x-auto">
+            <!-- Selected group will be dynamically inserted here -->
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dropdownGroupY = document.getElementById('dropdownGroupY');
+    const selectedGroupYContainer = document.getElementById('selectedGroupYContainer');
+
+    function updateSelectedGroupY() {
+        const selectedGroupY = document.querySelector('input[name="group-y[]"]:checked');
+        selectedGroupYContainer.innerHTML = ''; // Clear current display
+        if (selectedGroupY) {
+            const listItem = document.createElement('div');
+            listItem.className = 'flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-600 rounded';
+            listItem.textContent = selectedGroupY.nextElementSibling.textContent;
+            selectedGroupYContainer.appendChild(listItem);
+        }
+    }
+
+    // Toggle dropdown visibility
+    document.getElementById('dropdownGroupYButton').addEventListener('click', function () {
+        dropdownGroupY.classList.toggle('hidden');
+    });
+
+    // Update selected group on radio button change
+    document.querySelectorAll('input[name="group-y[]"]').forEach(radio => {
+        radio.addEventListener('change', updateSelectedGroupY);
+    });
+});
+</script>
+
 
             <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
                 <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Type of Chart</h2>
