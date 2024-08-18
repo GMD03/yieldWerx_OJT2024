@@ -51,6 +51,7 @@
                       JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
                       JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
                       $this->where_clause";
+
             
             $stmt = sqlsrv_query($this->conn, $query, $this->params);
             if ($stmt === false) { die('Query failed: ' . print_r(sqlsrv_errors(), true)); }

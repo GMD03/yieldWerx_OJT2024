@@ -15,16 +15,10 @@ $filters = [
     "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
 ];
 
-// Prepare SQL filters
-$sql_filters = [];
-$params = [];
-foreach ($filters as $key => $values) {
-    if (!empty($values)) {
-        $placeholders = implode(',', array_fill(0, count($values), '?'));
-        $sql_filters[] = "$key IN ($placeholders)";
-        $params = array_merge($params, $values);
-    }
-}
+
+$xColumn = isset($_GET["group-x"]) ? (($_GET["group-x"][0] === 'Probing_Sequence') ? 'p.abbrev' : '' . $_GET["group-x"][0]) : null;
+$yColumn = isset($_GET["group-y"]) ? (($_GET["group-y"][0] === 'Probing_Sequence') ? 'p.abbrev' : '' . $_GET["group-y"][0]) : null;
+$chartType = isset($_GET["type"]) ? $_GET["type"] : "scatter"; // default scatter chart
 
 // Create the WHERE clause if filters exist
 $where_clause = '';

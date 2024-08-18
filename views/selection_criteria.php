@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
 
-            <!--- <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
+            - <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
                 <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Type of Chart</h2>
                 <div class="flex flex-col w-full justify-start items-center gap-2">
                     <div class="flex items-center">
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <label for="radio-2" class="ms-2 text-sm font-medium text-gray-900">Scatter</label>
                     </div>
                 </div>
-            </div> --->
+            </div>
 
         </div>
         
