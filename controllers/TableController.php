@@ -30,7 +30,7 @@
                 "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
                 "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
                 "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : [],
-                "p.probing_sequence" => isset($_GET['abbrev']) ? $_GET['abbrev'] : []
+                "p.abbrev" => isset($_GET['abbrev']) ? $_GET['abbrev'] : []
             ];
 
             // Prepare SQL filters
@@ -52,6 +52,7 @@
             $query = "SELECT distinct tm.Table_Name FROM LOT l
                       JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
                       JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
+                      JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
                       $this->where_clause";
             
             $stmt = sqlsrv_query($this->conn, $query, $this->params);

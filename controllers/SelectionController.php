@@ -102,15 +102,39 @@
 
         public function getWaferHeaders()
         {
-            $query = "SELECT TOP(1)* FROM WAFER";
+            $query = "SELECT TOP(1) * FROM WAFER";
+
+            $headers = [];
+            $stmt = sqlsrv_query($this->conn, $query);
+            if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                foreach ($row as $key => $value) {
+                    if ($value !== null && $key !== 'Lot_Sequence' && $key !== 'Wafer_Sequence') {
+                        $headers[] = $key;
+                    }
+                }
+            }
+            sqlsrv_free_stmt($stmt);
+
+            sort($headers);
+            return $headers;
+        }
+        
+        public function getLotHeaders()
+        {
+            $query = "SELECT TOP(1)* FROM LOT";
             
             $headers = [];
             $stmt = sqlsrv_query($this->conn, $query);
             if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                $headers = array_keys($row);
+                foreach ($row as $key => $value) {
+                    if ($value !== null && $key !== 'Lot_Sequence') {
+                        $headers[] = $key;
+                    }
+                }
             }
             sqlsrv_free_stmt($stmt);
 
+            sort($headers);
             return $headers;
         }
     }
