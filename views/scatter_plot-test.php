@@ -15,8 +15,8 @@ $filters = [
     "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
 ];
 
-$xColumn = isset($_GET["group-x"]) ? (($_GET["group-x"][0] === 'Probing_Sequence') ? 'p.abbrev' : $_GET["group-x"][0]) : null;
-$yColumn = isset($_GET["group-y"]) ? (($_GET["group-y"][0] === 'Probing_Sequence') ? 'p.abbrev' : $_GET["group-y"][0]) : null;
+$xColumn = isset($_GET["group-x"]) ? $_GET["group-x"][0] : null;
+$yColumn = isset($_GET["group-y"]) ? $_GET["group-y"][0] : null;
 $chartType = isset($_GET["type"]) ? $_GET["type"] : "scatter"; // default scatter chart
 
 
@@ -53,28 +53,96 @@ sqlsrv_free_stmt($stmt); // Free the count statement here
 
 $joins = [];
 for ($i = 0; $i < count($tables); $i++) {
-    if ($i === 0) {
-        // For the first table, use a base join
-        $joins[] = "JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Wafer_Sequence = w.Wafer_Sequence";
-    } else {
-        // For subsequent tables, join with the previous table
-        $joins[] = "JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Die_Sequence = " . $tables[$i - 1] . ".Die_Sequence";
-    }
+    $joins[] = "LEFT JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Wafer_Sequence = w.Wafer_Sequence";
 }
 
 if (!empty($joins)) {
     $join_table_clause = implode("\n", $joins);
 }
 
+            // Define the query to get the mappings
+            $query = "SELECT DISTINCT Program_Name, Table_Name, Column_Name
+                        FROM TEST_PARAM_MAP
+                        WHERE Program_Name IN (" . implode(',', array_fill(0, count($filters['l.program_name']), '?')) . ") AND Column_Name IN (" . implode(',', array_fill(0, count($filters['tm.Column_Name']), '?')) . ");";
+
+            $stmt = sqlsrv_query($conn, $query, array_merge($filters['l.program_name'], $filters['tm.Column_Name']));
+            if ($stmt === false) { die(print_r(sqlsrv_errors(), true)); }
+
+            // Initialize arrays
+            $tableToProgram = [];
+            $columnToTables = [];
+
+            // Process the results
+            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                $programName = $row['Program_Name'];
+                $tableName = $row['Table_Name'];
+                $columnName = $row['Column_Name'];
+
+                // Populate program-to-tables mapping
+                if ($programName && $tableName) {
+                    if (!isset($programToTables[$tableName])) {
+                        $tableToProgram[$tableName] = [];
+                    }
+                    if (!in_array($tableName, $tableToProgram[$tableName])) {
+                        $tableToProgram[$tableName][] = $programName;
+                    }
+                }
+
+                // Populate column-to-tables mapping
+                if ($columnName && $tableName) {
+                    if (!isset($columnToTables[$columnName])) {
+                        $columnToTables[$columnName] = [];
+                    }
+                    if (!in_array($tableName, $columnToTables[$columnName])) {
+                        $columnToTables[$columnName][] = $tableName;
+                    }
+                }
+            }
+
+            // Generate SQL CASE statements
+            $caseStatements = [];
+
+            foreach ($columnToTables as $column => $tables) {
+                $whenClauses = [];
+                foreach ($tables as $tableName) {
+                    $programName = $tableToProgram[$tableName][0];
+                    $whenClauses[] = "WHEN l.Program_Name = '$programName' AND tm.Column_Name = '$column' THEN $tableName.$column";
+                }
+                $caseStatements[$column] = "
+                    CASE 
+                        " . implode(' ', $whenClauses) . " 
+                        ELSE NULL 
+                    END";
+            }
+
 $sort_clause = '';
 $xy_clauses = [];
 if ($xColumn || $yColumn) {
+    switch ($xColumn) {
+        case "Probing_Sequence":
+            $xColumn = "p.abbrev";
+            break;
+        case "Program_Name":
+            $xColumn = "l.Program_Name";
+            break;
+    }
+
+    switch ($yColumn) {
+        case "Probing_Sequence":
+            $yColumn = "p.abbrev";
+            break;
+        case "Program_Name":
+            $yColumn = "l.Program_Name";
+            break;
+    }
+
     if ($xColumn) {
         $xy_clauses[] = $xColumn . " " . $_GET["sort-x"];
     }
     if ($yColumn) {
         $xy_clauses[] = $yColumn . " " . $_GET["sort-y"];
     }
+
     $sort_clause = 'ORDER BY ' . implode(', ', $xy_clauses);
 }
 
@@ -101,10 +169,28 @@ if ($isSingleParameter) {
     $testNameX = $xLabel;
     sqlsrv_free_stmt($testNameStmtY);
 
+    switch ($xColumn) {
+        case "Probing_Sequence":
+            $xColumn = "p.abbrev";
+            break;
+        case "Program_Name":
+            $xColumn = "l.Program_Name";
+            break;
+    }
+
+    switch ($yColumn) {
+        case "Probing_Sequence":
+            $yColumn = "p.abbrev";
+            break;
+        case "Program_Name":
+            $yColumn = "l.Program_Name";
+            break;
+    }
+
     $tsql = "
     SELECT 
         w.Wafer_ID, 
-        {$parameter} AS Y, 
+        ". $caseStatements[$parameter] ." AS Y, 
         " . ($xColumn ? "$xColumn AS xGroup" : "'No xGroup' AS xGroup") . ", 
         " . ($yColumn ? "$yColumn AS yGroup" : "'No yGroup' AS yGroup") . "
     FROM LOT l
@@ -180,10 +266,28 @@ else {
         sqlsrv_free_stmt($testNameStmtX);
         sqlsrv_free_stmt($testNameStmtY);
 
+        switch ($xColumn) {
+            case "Probing_Sequence":
+                $xColumn = "p.abbrev";
+                break;
+            case "Program_Name":
+                $xColumn = "l.Program_Name";
+                break;
+        }
+
+        switch ($yColumn) {
+            case "Probing_Sequence":
+                $yColumn = "abbrev";
+                break;
+            case "Program_Name":
+                $yColumn = "l.Program_Name";
+                break;
+        }
+
         $tsql = "
         SELECT 
-            {$xLabel} AS X, 
-            {$yLabel} AS Y, 
+            ". $caseStatements[$xLabel] ." AS X, 
+            ". $caseStatements[$yLabel] ." AS Y, 
             " . ($xColumn ? "$xColumn AS xGroup" : "'No xGroup' AS xGroup") . ", 
             " . ($yColumn ? "$yColumn AS yGroup" : "'No yGroup' AS yGroup") . "
         FROM LOT l
