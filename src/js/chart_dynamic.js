@@ -10,35 +10,39 @@ document.addEventListener('DOMContentLoaded', () => {
             return [];
         }
 
-        if (xColumn && !yColumn) {
-            for (const group in dataGroups) {
-                for (const subGroup in dataGroups[group]) {
-                    const data = dataGroups[group][subGroup];
+        if (hasXColumn && !hasYColumn) {
+            for (const combination in dataGroups) {
+                for (const xGroup in dataGroups[combination]) {
+                    for (const yGroup in dataGroups[combination][xGroup]) {
+                        const data = dataGroups[combination][xGroup][yGroup];
+                        allXValues = allXValues.concat(extractValues(data, 'x'));
+                        allYValues = allYValues.concat(extractValues(data, 'y'));
+                    }
+                }
+            }
+        } else if (!hasXColumn && hasYColumn) {
+            for (const combination in dataGroups) {
+                for (const yGroup in dataGroups[combination]) {
+                    const data = dataGroups[combination][yGroup];
                     allXValues = allXValues.concat(extractValues(data, 'x'));
                     allYValues = allYValues.concat(extractValues(data, 'y'));
                 }
             }
-            console.log("allXValues: ", allXValues);
-            console.log("allYValues: ", allYValues); 
-        } else if (!xColumn && yColumn) {
-            for (const group in dataGroups) {
-                const data = dataGroups[group];
-                allXValues = allXValues.concat(extractValues(data, 'x'));
-                allYValues = allYValues.concat(extractValues(data, 'y'));
-            }
-        } else if (xColumn && yColumn) {
-            for (const group in dataGroups) {
-                for (const subGroup in dataGroups[group]) {
-                    const data = dataGroups[group][subGroup];
-                    allXValues = allXValues.concat(extractValues(data, 'x'));
-                    allYValues = allYValues.concat(extractValues(data, 'y'));
+        } else if (hasXColumn && hasYColumn) {
+            for (const combination in dataGroups) {
+                for (const yGroup in dataGroups[combination]) {
+                    for (const xGroup in dataGroups[combination][yGroup]) {
+                        const data = dataGroups[combination][yGroup][xGroup];
+                        allXValues = allXValues.concat(extractValues(data, 'x'));
+                        allYValues = allYValues.concat(extractValues(data, 'y'));
+                    }
                 }
             }
         } else {
-            for (const group in dataGroups) {
-                const data = dataGroups[group];
-                allXValues = allXValues.concat(extractValues(data, 'x'));
-                allYValues = allYValues.concat(extractValues(data, 'y'));
+            for (const combination in dataGroups) {
+                    const data = dataGroups[combination]['all'];
+                    allXValues = allXValues.concat(extractValues(data, 'x'));
+                    allYValues = allYValues.concat(extractValues(data, 'y'));
             }
         }
 
@@ -105,12 +109,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function calculateCorrelation(data) {
+        const n = data.length;
+        if (n === 0) return { r: null, r2: null };
+    
+        const sumX = data.reduce((sum, point) => sum + point.x, 0);
+        const sumY = data.reduce((sum, point) => sum + point.y, 0);
+        const sumXY = data.reduce((sum, point) => sum + point.x * point.y, 0);
+        const sumX2 = data.reduce((sum, point) => sum + point.x * point.x, 0);
+        const sumY2 = data.reduce((sum, point) => sum + point.y * point.y, 0);
+    
+        const numerator = (n * sumXY) - (sumX * sumY);
+        const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+    
+        if (denominator === 0) return { r: 0, r2: 0 };
+    
+        const r = numerator / denominator;
+        const r2 = r * r;
+    
+        return { r, r2 };
+    }
+    
+
     function createScatterChart(ctx, data, label, minX, maxX, minY, maxY) {
+        const { r, r2 } = calculateCorrelation(data);
+        const correlationText = `r: ${r.toFixed(2)}, r²: ${r2.toFixed(2)}`;
+    
         return new Chart(ctx, {
             type: 'scatter',
             data: {
                 datasets: [{
-                    label: label,
+                    label: `${label} (${correlationText})`,
                     data: data,
                     backgroundColor: 'rgba(115, 33, 98, 0.6)',
                     borderColor: 'rgba(82, 16, 69, 1)',
@@ -200,50 +229,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else {
-            if (hasXColumn && hasYColumn) {
-                for (const yGroup in groupedData) {
-                    const yGroupLabel = yGroup === 'No yGroup' ? 'Ungrouped' : yGroup;
-                    for (const xGroup in groupedData[yGroup]) {
-                        const xGroupLabel = xGroup === 'No xGroup' ? 'Ungrouped' : xGroup;
-                        const chartId = `chartXY_${yGroupLabel}_${xGroupLabel}`;
+            for (const combination in groupedData) {
+                if (hasXColumn && hasYColumn) {
+                    console.log(groupedData[combination]);
+                    for (const yGroup in groupedData[combination]) {
+                        for (const xGroup in groupedData[combination][yGroup]) {
+                            const chartId = `chartXY_${combination}_${yGroup}_${xGroup}`;
+                            const canvasElement = document.getElementById(chartId);
+                            if (canvasElement) {
+                                const ctx = canvasElement.getContext('2d');
+                                createChartFunc(ctx, groupedData[combination][yGroup][xGroup], `${xGroup}`, minX, maxX, minY, maxY);
+                            }
+                        }
+                    }
+                } else if (hasXColumn && !hasYColumn) {
+                    console.log(groupedData[combination]);
+                    for (const xGroup in groupedData[combination]) {
+                        for (const yGroup in groupedData[combination][xGroup]) {
+                            const chartId = `chartXY_${combination}_${xGroup}`;
+                            const canvasElement = document.getElementById(chartId);
+                            if (canvasElement) {
+                                const ctx = canvasElement.getContext('2d');
+                                createChartFunc(ctx, groupedData[combination][xGroup][yGroup], `${xGroup}`, minX, maxX, minY, maxY);
+                            }
+                        }
+                    }
+                } else if (!hasXColumn && hasYColumn) {
+                    console.log(groupedData[combination]);
+                    for (const yGroup in groupedData[combination]) {
+                        const chartId = `chartXY_${combination}_${yGroup}`;
                         const canvasElement = document.getElementById(chartId);
                         if (canvasElement) {
                             const ctx = canvasElement.getContext('2d');
-                            createChartFunc(ctx, groupedData[yGroup][xGroup], `${xGroupLabel} vs ${yGroupLabel}`, minX, maxX, minY, maxY);
+                            createChartFunc(ctx, groupedData[combination][yGroup], yGroup, minX, maxX, minY, maxY);
                         }
                     }
-                }
-            } else if (hasXColumn && !hasYColumn) {
-                for (const xGroup in groupedData) {
-                    console.log("Xgroup: " + xGroup);
-                    const xGroupLabel = xGroup === 'No xGroup' ? 'Ungrouped' : xGroup;
-                    for (const yGroup in groupedData[xGroup]) {
-                        const yGroupLabel = xGroup === 'No xGroup' ? 'Ungrouped' : yGroup;
-                        const chartId = `chartXY_${xGroupLabel}`;
-                        const canvasElement = document.getElementById(chartId);
-                        if (canvasElement) {
-                            const ctx = canvasElement.getContext('2d');
-                            createChartFunc(ctx, groupedData[xGroup][yGroup], `${xGroupLabel}`, minX, maxX, minY, maxY);
-                        }
-                    }
-                }
-            } else if (!hasXColumn && hasYColumn) {
-                for (const yGroup in groupedData) {
-                    console.log("Ygroup: " + yGroup);
-                    const yGroupLabel = yGroup === 'No yGroup' ? 'Ungrouped' : yGroup;
-                    const chartId = `chartXY_${yGroupLabel}`;
+                } else {
+                    const chartId = `chartXY_${combination}_all`;
                     const canvasElement = document.getElementById(chartId);
                     if (canvasElement) {
                         const ctx = canvasElement.getContext('2d');
-                        createChartFunc(ctx, groupedData[yGroup], `${yGroupLabel}`, minX, maxX, minY, maxY);
+                        createChartFunc(ctx, groupedData[combination]['all'], 'Line Chart', minX, maxX, minY, maxY);
                     }
-                }
-            } else {
-                const chartId = 'chartXY_all';
-                const canvasElement = document.getElementById(chartId);
-                if (canvasElement) {
-                    const ctx = canvasElement.getContext('2d');
-                    createChartFunc(ctx, groupedData['all'], 'Scatter Chart', minX, maxX, minY, maxY);
                 }
             }
         }
@@ -267,5 +294,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial chart creation with the default margin
     createCharts(groupedData, isSingleParameter, isSingleParameter ? createLineChart : createScatterChart);
-
+    console.log(groupedData);
 });

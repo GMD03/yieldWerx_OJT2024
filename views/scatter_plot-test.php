@@ -12,11 +12,12 @@ $filters = [
     "l.program_name" => isset($_GET['test_program']) ? $_GET['test_program'] : [],
     "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
     "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
-    "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
+    "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : [],
+    "p.abbrev" => isset($_GET["abbrev"]) ? $_GET["abbrev"] : [],
 ];
 
-$xColumn = isset($_GET["group-x"]) ? (($_GET["group-x"][0] === 'Probing_Sequence') ? 'p.abbrev' : 'w.' . $_GET["group-x"][0]) : null;
-$yColumn = isset($_GET["group-y"]) ? (($_GET["group-y"][0] === 'Probing_Sequence') ? 'p.abbrev' : 'w.' . $_GET["group-y"][0]) : null;
+$xColumn = isset($_GET["group-x"]) ? $_GET["group-x"][0] : null;
+$yColumn = isset($_GET["group-y"]) ? $_GET["group-y"][0] : null;
 $chartType = isset($_GET["type"]) ? $_GET["type"] : "scatter"; // default scatter chart
 
 
@@ -43,6 +44,7 @@ $join_table_clause = '';
 $query = "SELECT distinct tm.Table_Name FROM LOT l
             JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
             JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
+            JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
             $where_clause";
 
 $stmt = sqlsrv_query($conn, $query, $params);
@@ -53,28 +55,78 @@ sqlsrv_free_stmt($stmt); // Free the count statement here
 
 $joins = [];
 for ($i = 0; $i < count($tables); $i++) {
-    if ($i === 0) {
-        // For the first table, use a base join
-        $joins[] = "JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Wafer_Sequence = w.Wafer_Sequence";
-    } else {
-        // For subsequent tables, join with the previous table
-        $joins[] = "JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Die_Sequence = " . $tables[$i - 1] . ".Die_Sequence";
-    }
+    $joins[] = "LEFT JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Wafer_Sequence = w.Wafer_Sequence";
 }
 
 if (!empty($joins)) {
     $join_table_clause = implode("\n", $joins);
 }
 
+            // Define the query to get the mappings
+            $query = "SELECT DISTINCT Program_Name, Table_Name, Column_Name
+                        FROM TEST_PARAM_MAP
+                        WHERE Program_Name IN (" . implode(',', array_fill(0, count($filters['l.program_name']), '?')) . ") AND Column_Name IN (" . implode(',', array_fill(0, count($filters['tm.Column_Name']), '?')) . ");";
+
+            $stmt = sqlsrv_query($conn, $query, array_merge($filters['l.program_name'], $filters['tm.Column_Name']));
+            if ($stmt === false) { die(print_r(sqlsrv_errors(), true)); }
+
+            // Initialize arrays
+            $tableToProgram = [];
+            $columnToTables = [];
+
+            // Process the results
+            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                $programName = $row['Program_Name'];
+                $tableName = $row['Table_Name'];
+                $columnName = $row['Column_Name'];
+
+                // Populate program-to-tables mapping
+                if ($programName && $tableName) {
+                    if (!isset($programToTables[$tableName])) {
+                        $tableToProgram[$tableName] = [];
+                    }
+                    if (!in_array($tableName, $tableToProgram[$tableName])) {
+                        $tableToProgram[$tableName][] = $programName;
+                    }
+                }
+
+                // Populate column-to-tables mapping
+                if ($columnName && $tableName) {
+                    if (!isset($columnToTables[$columnName])) {
+                        $columnToTables[$columnName] = [];
+                    }
+                    if (!in_array($tableName, $columnToTables[$columnName])) {
+                        $columnToTables[$columnName][] = $tableName;
+                    }
+                }
+            }
+
+            // Generate SQL CASE statements
+            $caseStatements = [];
+
+            foreach ($columnToTables as $column => $tables) {
+                $whenClauses = [];
+                foreach ($tables as $tableName) {
+                    $programName = $tableToProgram[$tableName][0];
+                    $whenClauses[] = "WHEN l.Program_Name = '$programName' AND tm.Column_Name = '$column' THEN $tableName.$column";
+                }
+                $caseStatements[$column] = "
+                    CASE 
+                        " . implode(' ', $whenClauses) . " 
+                        ELSE NULL 
+                    END";
+            }
+
 $sort_clause = '';
 $xy_clauses = [];
 if ($xColumn || $yColumn) {
     if ($xColumn) {
-        $xy_clauses[] = $xColumn . " " . $_GET["sort-x"];
+        $xy_clauses[] = $xColumn === "Probing_Sequence" ? "p.abbrev" : ($xColumn === "Program_Name" ? "l.Program_Name" : $xColumn) . " " . $_GET["sort-x"];
     }
     if ($yColumn) {
-        $xy_clauses[] = $yColumn . " " . $_GET["sort-y"];
+        $xy_clauses[] = $yColumn === "Probing_Sequence" ? "p.abbrev" : ($yColumn === "Program_Name" ? "l.Program_Name" : $yColumn) . " " . $_GET["sort-y"];
     }
+
     $sort_clause = 'ORDER BY ' . implode(', ', $xy_clauses);
 }
 
@@ -101,12 +153,13 @@ if ($isSingleParameter) {
     $testNameX = $xLabel;
     sqlsrv_free_stmt($testNameStmtY);
 
+
     $tsql = "
     SELECT 
         w.Wafer_ID, 
-        {$parameter} AS Y, 
-        " . ($xColumn ? "$xColumn AS xGroup" : "'No xGroup' AS xGroup") . ", 
-        " . ($yColumn ? "$yColumn AS yGroup" : "'No yGroup' AS yGroup") . "
+        ". $caseStatements[$parameter] ." AS Y, 
+        " . ($xColumn ? ($xColumn === "Probing_Sequence" ? "p.abbrev" : ($xColumn === "Program_Name" ? "l.Program_Name" : $xColumn))." AS xGroup" : "'No xGroup' AS xGroup") . ", 
+        " . ($yColumn ? ($yColumn === "Probing_Sequence" ? "p.abbrev" : ($yColumn === "Program_Name" ? "l.Program_Name" : $yColumn))." AS yGroup" : "'No yGroup' AS yGroup") . "
     FROM LOT l
     JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
     JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
@@ -157,138 +210,67 @@ if ($isSingleParameter) {
     sqlsrv_free_stmt($stmt);
 }
 else {
-    // if (strtolower($chartType) === 'scatter') {
-        $combinations = [];
-        foreach ($filters['tm.Column_Name'] as $i => $parameter) {
-            for ($j = $i + 1; $j < count($filters['tm.Column_Name']); $j++) {
-                $combinations[] = [$parameter, $filters['tm.Column_Name'][$j]];
+    $combinations = [];
+    foreach ($filters['tm.Column_Name'] as $i => $parameter) {
+        for ($j = $i + 1; $j < count($filters['tm.Column_Name']); $j++) {
+            $combinations[] = [$parameter, $filters['tm.Column_Name'][$j]];
+        }
+    }
+
+    foreach ($combinations as $index => $combination) {
+        $xLabel = $combination[0];
+        $yLabel = $combination[1];
+        
+        $combinationKey = implode('_', $combination);
+
+        $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
+        $testNameStmtX = sqlsrv_query($conn, $testNameQuery, [$xLabel]);
+        $testNameX = sqlsrv_fetch_array($testNameStmtX, SQLSRV_FETCH_ASSOC)['test_name'];
+
+        $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
+        $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
+
+        sqlsrv_free_stmt($testNameStmtX);
+        sqlsrv_free_stmt($testNameStmtY);
+
+        $tsql = "
+        SELECT 
+            ". $caseStatements[$xLabel] ." AS X, 
+            ". $caseStatements[$yLabel] ." AS Y, 
+        " . ($xColumn ? ($xColumn === "Probing_Sequence" ? "p.abbrev" : ($xColumn === "Program_Name" ? "l.Program_Name" : $xColumn))." AS xGroup" : "'No xGroup' AS xGroup") . ", 
+        " . ($yColumn ? ($yColumn === "Probing_Sequence" ? "p.abbrev" : ($yColumn === "Program_Name" ? "l.Program_Name" : $yColumn))." AS yGroup" : "'No yGroup' AS yGroup") . "
+        FROM LOT l
+        JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
+        JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
+        JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
+        $join_table_clause
+        $where_clause
+        $sort_clause";
+
+        $stmt = sqlsrv_query($conn, $tsql, $params);
+        if ($stmt === false) {
+            die(print_r(sqlsrv_errors(), true));
+        }
+
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $xGroup = $row['xGroup'];
+            $yGroup = $row['yGroup'];
+            $xValue = floatval($row['X']);
+            $yValue = floatval($row['Y']);
+
+            if ($xColumn && $yColumn) {
+                $groupedData[$combinationKey][$yGroup][$xGroup][] = ['x' => $xValue, 'y' => $yValue];
+            } elseif ($xColumn && !$yColumn) {
+                $groupedData[$combinationKey][$xGroup][$yGroup][] = ['x' => $xValue, 'y' => $yValue];
+            } elseif (!$xColumn && $yColumn) {
+                $groupedData[$combinationKey][$yGroup][] = ['x' => $xValue, 'y' => $yValue];
+            } else {
+                $groupedData[$combinationKey]['all'][] = ['x' => $xValue, 'y' => $yValue];
             }
         }
 
-        foreach ($combinations as $index => $combination) {
-            $xLabel = $combination[0];
-            $yLabel = $combination[1];
-
-            $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
-            $testNameStmtX = sqlsrv_query($conn, $testNameQuery, [$xLabel]);
-            $testNameX = sqlsrv_fetch_array($testNameStmtX, SQLSRV_FETCH_ASSOC)['test_name'];
-
-            $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
-            $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
-
-            sqlsrv_free_stmt($testNameStmtX);
-            sqlsrv_free_stmt($testNameStmtY);
-
-            $tsql = "
-            SELECT 
-                {$xLabel} AS X, 
-                {$yLabel} AS Y, 
-                " . ($xColumn ? "$xColumn AS xGroup" : "'No xGroup' AS xGroup") . ", 
-                " . ($yColumn ? "$yColumn AS yGroup" : "'No yGroup' AS yGroup") . "
-            FROM LOT l
-            JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
-            JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
-            JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
-            $join_table_clause
-            $where_clause
-            $sort_clause";
-
-            $stmt = sqlsrv_query($conn, $tsql, $params);
-            if ($stmt === false) {
-                die(print_r(sqlsrv_errors(), true));
-            }
-
-            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                $xGroup = $row['xGroup'];
-                $yGroup = $row['yGroup'];
-                $xValue = floatval($row['X']);
-                $yValue = floatval($row['Y']);
-
-                if ($xColumn && $yColumn) {
-                    $groupedData[$yGroup][$xGroup][] = ['x' => $xValue, 'y' => $yValue];
-                } elseif ($xColumn && !$yColumn) {
-                    $groupedData[$xGroup][$yGroup][] = ['x' => $xValue, 'y' => $yValue];
-                } elseif (!$xColumn && $yColumn) {
-                    $groupedData[$yGroup][] = ['x' => $xValue, 'y' => $yValue];
-                } else {
-                    $groupedData['all'][] = ['x' => $xValue, 'y' => $yValue];
-                }
-            }
-
-            sqlsrv_free_stmt($stmt);
-        }
-    // }
-    // else {
-    //     foreach ($filters['tm.Column_Name'] as $parameter) {
-    //         $xLabel = 'Count';
-    //         $yLabel = $parameter;
-
-    //         // Fetch the test_name corresponding to yLabel
-    //         $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
-    //         $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
-    //         $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
-    //         $testNameX = $xLabel;
-    //         sqlsrv_free_stmt($testNameStmtY);
-
-    //         $tsql = "
-    //         SELECT 
-    //             w.Wafer_ID, 
-    //             d1.{$parameter} AS Y, 
-    //             " . ($xColumn ? "$xColumn AS xGroup" : "'No xGroup' AS xGroup") . ", 
-    //             " . ($yColumn ? "$yColumn AS yGroup" : "'No yGroup' AS yGroup") . ",
-    //             ROW_NUMBER() OVER(PARTITION BY " . ($xColumn ?: "'No xGroup'") . " ORDER BY d1.Die_Sequence) AS row_num
-    //         FROM DEVICE_1_CP1_V1_0_001 d1
-    //         JOIN WAFER w ON w.Wafer_Sequence = d1.Wafer_Sequence
-    //         JOIN LOT l ON l.Lot_Sequence = w.Lot_Sequence
-    //         JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
-    //         JOIN DEVICE_1_CP1_V1_0_002 d2 ON d1.Die_Sequence = d2.Die_Sequence
-    //         JOIN ProbingSequenceOrder p ON p.probing_sequence = w.probing_sequence
-    //         $where_clause
-    //         $sort_clause";
-    //         var_dump($tsql);
-
-    //         $stmt = sqlsrv_query($conn, $tsql, $params);
-    //         if ($stmt === false) {
-    //             die(print_r(sqlsrv_errors(), true));
-    //         }
-
-    //         while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    //             $xGroup = $row['xGroup'];
-    //             $yGroup = $row['yGroup'];
-    //             $yValue = floatval($row['Y']);
-
-    //             if ($xColumn && $yColumn) {
-    //                 if (!isset($globalCounters['ycol'][$yGroup][$xGroup])) {
-    //                     $globalCounters['ycol'][$yGroup][$xGroup] = count($groupedData[$yGroup][$xGroup] ?? []) + 1;
-    //                 } else {
-    //                     $globalCounters['ycol'][$yGroup][$xGroup]++;
-    //                 }
-    //                 $groupedData[$yGroup][$xGroup][] = ['x' => $globalCounters['ycol'][$yGroup][$xGroup], 'y' => $yValue];
-    //             } elseif ($xColumn && !$yColumn) {
-    //                 if (!isset($globalCounters['xcol'][$yGroup][$xGroup])) {
-    //                     $globalCounters['xcol'][$yGroup][$xGroup] = count($groupedData[$yGroup][$xGroup] ?? []) + 1;
-    //                 } else {
-    //                     $globalCounters['xcol'][$yGroup][$xGroup]++;
-    //                 }
-    //                 $groupedData[$xGroup][$yGroup][] = ['x' => $globalCounters['xcol'][$yGroup][$xGroup], 'y' => $yValue];
-    //             } elseif (!$xColumn && $yColumn) {
-
-    //                 if (!isset($globalCounters['ycol'][$yGroup])) {
-    //                     $globalCounters['ycol'][$yGroup] = count($groupedData[$yGroup] ?? []) + 1;
-    //                 } else {
-    //                     $globalCounters['ycol'][$yGroup]++;
-    //                 }
-    //                 $groupedData[$yGroup][] = ['x' => $globalCounters['ycol'][$yGroup], 'y' => $yValue];
-    //             } else {
-
-    //                 $globalCounters['all']++;
-    //                 $groupedData['all'][] = ['x' => $globalCounters['all'], 'y' => $yValue];
-    //             }
-    //         }
-
-    //         sqlsrv_free_stmt($stmt);
-    //     }
-    // }
+        sqlsrv_free_stmt($stmt);
+    }
 }
 $numDistinctGroups = count($groupedData);
 
@@ -326,6 +308,8 @@ $numDistinctGroups = count($groupedData);
 if(!$isSingleParameter){
 echo '<h1 class="text-center text-2xl font-bold w-full mb-6">XY Scatter Plot</h1>';
 foreach ($combinations as $index => $combination) {
+    $combinationKey = implode('_', $combination);
+    $data = $groupedData[$combinationKey];
     $xLabel = $combination[0];
     $yLabel = $combination[1];
 
@@ -352,16 +336,19 @@ foreach ($combinations as $index => $combination) {
             <?php
             if (isset($xColumn) && isset($yColumn)) {
                 // Both X and Y parameters are set
-                $yGroupKeys = array_keys($groupedData);
+                echo '<div class="flex flex-row items-center justify-center w-full">
+                        <div class="-rotate-90"><h2 class="text-center text-xl font-semibold">'.$yColumn.'</h2></div>
+                        <div class="flex flex-col items-center justify-center w-full">';
+                $yGroupKeys = array_keys($data);
                 $lastYGroup = end($yGroupKeys);
-                foreach ($groupedData as $yGroup => $xGroupData) {
+                foreach ($data as $yGroup => $xGroupData) {
                     echo '<div class="flex flex-row items-center justify-center w-full">';
                     echo '<div><h2 class="text-center text-xl font-semibold mb-4 -rotate-90">' . $yGroup . '</h2></div>';
                     echo '<div class="grid gap-2 grid-cols-' . count($xGroupData) . '">';
 
                     foreach ($xGroupData as $xGroup => $data) {
                         echo '<div class="flex items-center justify-center flex-col">';
-                        echo '<canvas id="chartXY_' . $yGroup . '_' . $xGroup . '"></canvas>';
+                        echo '<canvas id="chartXY_' . $combinationKey . '_' . $yGroup . '_' . $xGroup . '"></canvas>';
                         if ($yGroup === $lastYGroup) {
                             echo '<h3 class="text-center text-lg font-semibold">' . $xGroup . '</h3>';
                         }
@@ -369,32 +356,45 @@ foreach ($combinations as $index => $combination) {
                     }
                     echo '</div></div>';
                 }
+                echo '<h3 class="text-center text-lg font-semibold">'.$xColumn.'</h3>
+                    </div>
+                </div>';
             } elseif (isset($xColumn) && !isset($yColumn)) {
                 // Only X parameter is set
+                echo '<div class="flex flex-row items-center justify-center w-full">
+                        <div class="flex flex-col items-center justify-center w-full">';
                 echo '<div class="flex flex-row items-center justify-center w-full">';
                 echo '<div class="grid gap-2 grid-cols-' . $numDistinctGroups . '">';
-                foreach ($groupedData as $xGroup => $data) {
+                foreach ($data as $xGroup => $data) {
                     echo '<div class="flex items-center justify-center flex-col">';
-                    echo '<canvas id="chartXY_' . $xGroup . '"></canvas>';
+                    echo '<canvas id="chartXY_' . $combinationKey . '_' . $xGroup . '"></canvas>';
                     echo '<h3 class="text-center text-lg font-semibold">' . $xGroup . '</h3></div>';
                 }
                 echo '</div></div>';
+                echo '<h3 class="text-center text-lg font-semibold">'.$xColumn.'</h3>
+                    </div>
+                </div>';
             } elseif (!isset($xColumn) && isset($yColumn)) {
                 // Only Y parameter is set
+                echo '<div class="flex flex-row items-center justify-center w-full">
+                        <div class="-rotate-90"><h2 class="text-center text-xl font-semibold">'.$yColumn.'</h2></div>
+                        <div class="flex flex-col items-center justify-center w-full">';
                 echo '<div class="flex flex-row items-center justify-center w-full">';
                 echo '<div class="grid gap-2 grid-cols-1">';
-                foreach ($groupedData as $yGroup => $data) {
+                foreach ($data as $yGroup => $data) {
                     echo '<div class="flex flex-row justify-center items-center">';
                     echo '<div class="text-center">
                         <h2 class="text-center text-xl font-semibold mb-4 -rotate-90">' . $yGroup . '</h2></div>';
-                    echo '<canvas id="chartXY_' . $yGroup . '"></canvas>';
+                    echo '<canvas id="chartXY_' . $combinationKey . '_' . $yGroup . '"></canvas>';
                     echo '</div>';
                 }
                 echo '</div></div>';
+                echo '</div>
+                    </div>';
             } else {
                 // Neither X nor Y parameters are set
                 echo '<div class="flex items-center justify-center w-full">';
-                echo '<div><canvas id="chartXY_all"></canvas></div>';
+                echo '<div><canvas id="chartXY_' . $combinationKey . '_all"></canvas></div>';
                 echo '</div>';
             }
             ?>
