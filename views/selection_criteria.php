@@ -265,7 +265,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         <input id="radio-2" type="radio" value="scatter" name="type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
                         <label for="radio-2" class="ms-2 text-sm font-medium text-gray-900">Scatter</label>
                     </div>
-                    <input type="hidden" name="type" value="test">
                 </div>
             </div>
 
