@@ -12,8 +12,7 @@ $filters = [
     "l.program_name" => isset($_GET['test_program']) ? $_GET['test_program'] : [],
     "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
     "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
-    "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : [],
-    "p.abbrev" => isset($_GET["abbrev"]) ? $_GET["abbrev"] : [],
+    "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
 ];
 
 $xColumn = isset($_GET["group-x"]) ? $_GET["group-x"][0] : null;
@@ -60,32 +59,24 @@ if (!empty($sql_filters)) {
 
 $join_table_clause = '';
 
-// get the corresponding table names
-$query = "SELECT distinct tm.Table_Name FROM LOT l
-            JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
-            JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
-            JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
-            $where_clause";
-
-$stmt = sqlsrv_query($conn, $query, $params);
-if ($stmt === false) { die('Query failed: ' . print_r(sqlsrv_errors(), true)); }
-$tables = [];
-while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $tables[] = $row['Table_Name']; }
-sqlsrv_free_stmt($stmt); // Free the count statement here    
-
-$joins = [];
-for ($i = 0; $i < count($tables); $i++) {
-    $joins[] = "LEFT JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Wafer_Sequence = w.Wafer_Sequence";
-}
-
-if (!empty($joins)) {
-    $join_table_clause = implode("\n", $joins);
-}
-
+            // get the corresponding table names
+            $query = "SELECT distinct tm.Table_Name FROM LOT l
+                      JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
+                      JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
+                      JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
+                      $where_clause";
+            
+            $stmt = sqlsrv_query($conn, $query, $params);
+            if ($stmt === false) { die('Query failed: ' . print_r(sqlsrv_errors(), true)); }
+            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $tables[] = $row['Table_Name']; }
+            sqlsrv_free_stmt($stmt); // Free the count statement here   
+            
             // Define the query to get the mappings
-            $query = "SELECT DISTINCT Program_Name, Table_Name, Column_Name
-                        FROM TEST_PARAM_MAP
-                        WHERE Program_Name IN (" . implode(',', array_fill(0, count($filters['l.program_name']), '?')) . ") AND Column_Name IN (" . implode(',', array_fill(0, count($filters['tm.Column_Name']), '?')) . ");";
+            $query = "
+            SELECT DISTINCT Program_Name, Table_Name, Column_Name
+            FROM TEST_PARAM_MAP
+            WHERE Program_Name IN (" . implode(',', array_fill(0, count($filters['l.program_name']), '?')) . ") AND Column_Name IN (" . implode(',', array_fill(0, count($filters['tm.Column_Name']), '?')) . ");
+            ";
 
             $stmt = sqlsrv_query($conn, $query, array_merge($filters['l.program_name'], $filters['tm.Column_Name']));
             if ($stmt === false) { die(print_r(sqlsrv_errors(), true)); }
@@ -121,20 +112,34 @@ if (!empty($joins)) {
                 }
             }
 
-            // Generate SQL CASE statements
-            $caseStatements = [];
+            $joins = [];
+            $programTracking = []; // To track the first table in each program
 
-            foreach ($columnToTables as $column => $tables) {
-                $whenClauses = [];
-                foreach ($tables as $tableName) {
-                    $programName = $tableToProgram[$tableName][0];
-                    $whenClauses[] = "WHEN l.Program_Name = '$programName' AND tm.Column_Name = '$column' THEN $tableName.$column";
+            foreach ($tables as $currentTable) {
+                $programName = $tableToProgram[$currentTable][0]; // Get the program name for the current table
+
+                if (!isset($programTracking[$programName])) {
+                    // This is the first table in the program
+                    $joins[] = "LEFT JOIN " . $currentTable . " ON " . $currentTable . ".Wafer_Sequence = w.Wafer_Sequence AND l.Program_Name = '{$programName}'";
+                    $programTracking[$programName] = $currentTable; // Track this table as the first in the program
+                } else {
+                    // Subsequent table in the same program
+                    $joins[] = "LEFT JOIN " . $currentTable . " ON " . $currentTable . ".Die_Sequence = " . $programTracking[$programName] . ".Die_Sequence AND l.Program_Name = '{$programName}'";
                 }
-                $caseStatements[$column] = "
-                    CASE 
-                        " . implode(' ', $whenClauses) . " 
-                        ELSE NULL 
-                    END";
+            }
+
+            if (!empty($joins)) {
+                $join_table_clause = implode("\n", $joins);
+            }
+
+            $dynamic_columns = [];
+            foreach ($columnToTables as $column => $tables) {
+                // Generate COALESCE statement for each column with all specified tables
+                $coalesceParts = [];
+                foreach ($tables as $table) {
+                    $coalesceParts[] = "{$table}.{$column}";
+                }
+                $dynamic_columns[$column] = "COALESCE(" . implode(", ", $coalesceParts) . ")";
             }
 
 $sort_clause = '';
@@ -177,7 +182,7 @@ if ($isSingleParameter) {
     $tsql = "
     SELECT 
         w.Wafer_ID, 
-        ". $caseStatements[$parameter] ." AS Y, 
+        ". $dynamic_columns[$parameter] ." AS Y, 
         " . ($xColumn ? ($xColumn === "Probing_Sequence" ? "p.abbrev" : ($xColumn === "Program_Name" ? "l.Program_Name" : $xColumn))." AS xGroup" : "'No xGroup' AS xGroup") . ", 
         " . ($yColumn ? ($yColumn === "Probing_Sequence" ? "p.abbrev" : ($yColumn === "Program_Name" ? "l.Program_Name" : $yColumn))." AS yGroup" : "'No yGroup' AS yGroup") . "
     FROM LOT l
@@ -255,8 +260,8 @@ else {
 
         $tsql = "
         SELECT 
-            ". $caseStatements[$xLabel] ." AS X, 
-            ". $caseStatements[$yLabel] ." AS Y, 
+            ". $dynamic_columns[$xLabel] ." AS X, 
+            ". $dynamic_columns[$yLabel] ." AS Y, 
         " . ($xColumn ? ($xColumn === "Probing_Sequence" ? "p.abbrev" : ($xColumn === "Program_Name" ? "l.Program_Name" : $xColumn))." AS xGroup" : "'No xGroup' AS xGroup") . ", 
         " . ($yColumn ? ($yColumn === "Probing_Sequence" ? "p.abbrev" : ($yColumn === "Program_Name" ? "l.Program_Name" : $yColumn))." AS yGroup" : "'No yGroup' AS yGroup") . "
         FROM LOT l
@@ -275,17 +280,19 @@ else {
         while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $xGroup = $row['xGroup'];
             $yGroup = $row['yGroup'];
-            $xValue = floatval($row['X']);
-            $yValue = floatval($row['Y']);
+            $xValue = $row['X'];
+            $yValue = $row['Y'];
 
-            if ($xColumn && $yColumn) {
-                $groupedData[$combinationKey][$yGroup][$xGroup][] = ['x' => $xValue, 'y' => $yValue];
-            } elseif ($xColumn && !$yColumn) {
-                $groupedData[$combinationKey][$xGroup][$yGroup][] = ['x' => $xValue, 'y' => $yValue];
-            } elseif (!$xColumn && $yColumn) {
-                $groupedData[$combinationKey][$yGroup][] = ['x' => $xValue, 'y' => $yValue];
-            } else {
-                $groupedData[$combinationKey]['all'][] = ['x' => $xValue, 'y' => $yValue];
+            if ($xValue && $yValue) {
+                if ($xColumn && $yColumn) {
+                    $groupedData[$combinationKey][$yGroup][$xGroup][] = ['x' => $xValue, 'y' => $yValue];
+                } elseif ($xColumn && !$yColumn) {
+                    $groupedData[$combinationKey][$xGroup][$yGroup][] = ['x' => $xValue, 'y' => $yValue];
+                } elseif (!$xColumn && $yColumn) {
+                    $groupedData[$combinationKey][$yGroup][] = ['x' => $xValue, 'y' => $yValue];
+                } else {
+                    $groupedData[$combinationKey]['all'][] = ['x' => $xValue, 'y' => $yValue];
+                }
             }
         }
 
