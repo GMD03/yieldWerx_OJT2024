@@ -59,11 +59,14 @@
         <div class="p-4 rounded-lg dark:border-gray-700 mt-14">
             <div>
             <?php
-            if (isset($_GET["type"]) && $_GET['type'] === "line") {
+            if (isset($_GET["type"]) && $_GET['type'] === "test") {
+                include('views/scatter_plot-test.php');
+            }
+            elseif (isset($_GET["type"]) && $_GET['type'] === "line") {
                 include('views/line_chart.php');
             }
             else {
-                include('views/scatter_plot-test.php');
+                include('views/scatter_plot.php');
             }
             
             ?>

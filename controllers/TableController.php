@@ -29,8 +29,7 @@
                 "l.program_name" => isset($_GET['test_program']) ? $_GET['test_program'] : [],
                 "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
                 "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
-                "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : [],
-                "p.abbrev" => isset($_GET['abbrev']) ? $_GET['abbrev'] : []
+                "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
             ];
 
             // Prepare SQL filters
@@ -40,6 +39,26 @@
                     $placeholders = implode(',', array_fill(0, count($values), '?'));
                     $sql_filters[] = "$key IN ($placeholders)";
                     $this->params = array_merge($this->params, $values);
+                }
+            }
+
+            $groupXY = ['x' => isset($_GET["group-x"]) ? $_GET["group-x"][0] : null,
+                        'y' => isset($_GET["group-y"]) ? $_GET["group-y"][0] : null];
+
+            $filterXY = ['x' => isset($_GET['filter-x']) ? $_GET['filter-x'] : [],
+                         'y' => isset($_GET['filter-y']) ? $_GET['filter-y'] : []];
+
+            foreach ($groupXY as $key => $value) {
+                if (!empty($value) && !empty($filterXY[$key])) {
+                    if ($value === "Program_Name") {
+                        $value = "l.Program_Name";
+                    } else if ($value === "Probing_Sequence") {
+                        $value = "p.abbrev";
+                    }
+
+                    $placeholders = implode(',', array_fill(0, count($filterXY[$key]), '?'));
+                    $sql_filters[] = "$value IN ($placeholders)";
+                    $this->params = array_merge($this->params, $filterXY[$key]);
                 }
             }
 

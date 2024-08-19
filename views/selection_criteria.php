@@ -8,6 +8,80 @@
     $abbrev = $selectionController->getProbingFilter();
 ?>
 
+<script>
+    function fetchFilters(selectedValue, targetElement, type) {
+        $.ajax({
+            url: 'fetch_filters.php',
+            method: 'GET',
+            data: {
+                value: selectedValue
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log(response);
+                // Create the <ul> element with the required classes
+                const ul = $('<ul>', {
+                    class: 'max-h-48 px-3 pb-3 overflow-y-auto text-sm text-gray-700',
+                    'aria-labelledby': 'dropdownFilterButton'
+                });
+
+                // // Add the "Select All" option
+                // const selectAllLi = $('<li>');
+                // const selectAllDiv = $('<div>', {
+                //     class: 'flex items-center p-2 rounded hover:bg-gray-100'
+                // });
+                // const selectAllCheckbox = $('<input>', {
+                //     id: 'select-all',
+                //     type: 'checkbox',
+                //     class: 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500'
+                // });
+                // const selectAllLabel = $('<label>', {
+                //     for: 'select-all',
+                //     class: 'w-full ms-2 text-sm font-medium text-gray-900 rounded',
+                //     text: 'Select All'
+                // });
+
+                // selectAllDiv.append(selectAllCheckbox, selectAllLabel);
+                // selectAllLi.append(selectAllDiv);
+                // ul.append(selectAllLi);
+
+                // Add items from the response
+                response.forEach(item => {
+                    const li = $('<li>');
+                    const div = $('<div>', {
+                        class: 'flex items-center p-2 rounded hover:bg-gray-100'
+                    });
+
+                    const checkbox = $('<input>', {
+                        id: `checkbox-item-${item}`,
+                        name: `filter-${type}[]`,
+                        type: 'checkbox',
+                        value: item,
+                        class: 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500'
+                    });
+
+                    const label = $('<label>', {
+                        for: `checkbox-item-${item}`,
+                        class: 'w-full ms-2 text-sm font-medium text-gray-900 rounded',
+                        text: item
+                    });
+
+                    div.append(checkbox, label);
+                    li.append(div);
+                    ul.append(li);
+                });
+
+                // Clear previous content and append the new <ul>
+                $(targetElement).empty().append(ul);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', status, error);
+                console.log('Response Text:', xhr.responseText);
+            }
+        });
+    }
+</script>
+
 <div class="container mx-auto p-6">
     <h1 class="text-center text-2xl font-bold mb-4 w-full">Selection Criteria</h1>
     <form action="table_view.php" method="GET" id="criteriaForm">
@@ -18,30 +92,26 @@
 
             <!-- Dropdown menu -->
             <div class="flex w-full justify-start items-center gap-2 mb-4">
-                <button id="dropdownFilterButton" data-dropdown-toggle="dropdownFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
-                    Probing Sequence
+                <button id="dropdownXFilterButton" data-dropdown-toggle="dropdownXFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
+                    X-Filter
                     <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
                     </svg>
                 </button>
 
-                <div id="dropdownFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
-                    <ul class="h-48 px-3 pb-3 overflow-y-auto text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownFilterButton">
-                        <li>
-                            <div class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600">
-                                <input id="select-all" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
-                                <label for="select-all" class="w-full ms-2 text-sm font-medium text-gray-900 rounded dark:text-gray-300">Select All</label>
-                            </div>
-                        </li>
-                        <?php foreach ($abbrev as $item): ?>
-                        <li>
-                            <div class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600">
-                                <input id="checkbox-item-<?= htmlspecialchars($item['abbrev']) ?>" name="abbrev[]" type="checkbox" value="<?= htmlspecialchars($item['probing_sequence']) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500 filter-checkbox">
-                                <label for="checkbox-item-<?= htmlspecialchars($item['abbrev']) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded dark:text-gray-300"><?= htmlspecialchars($item['abbrev']) ?></label>
-                            </div>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
+                <div id="dropdownXFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
+                    
+                </div>
+
+                <button id="dropdownYFilterButton" data-dropdown-toggle="dropdownYFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
+                    Y-Filter
+                    <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                    </svg>
+                </button>
+
+                <div id="dropdownYFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
+                    
                 </div>
             </div>
 
@@ -70,24 +140,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Toggle dropdown visibility
-    document.getElementById('dropdownFilterButton').addEventListener('click', function () {
-        dropdownFilter.classList.toggle('hidden');
-    });
-
-    // Update selected filters on checkbox change
-    document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', updateSelectedFilters);
-    });
-
-    // Select all functionality
-    document.getElementById('select-all').addEventListener('change', function () {
-        const isChecked = this.checked;
-        document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-            checkbox.checked = isChecked;
-        });
-        updateSelectedFilters();
-    });
 });
 </script>
 
@@ -151,13 +203,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateSelectedGroup() {
         const selectedGroup = document.querySelector('input[name="group-x[]"]:checked');
+        const selectedText = selectedGroup.nextElementSibling.textContent;
         selectedGroupContainer.innerHTML = ''; // Clear current display
         if (selectedGroup) {
             const listItem = document.createElement('div');
             listItem.className = 'flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-600 rounded';
-            listItem.textContent = selectedGroup.nextElementSibling.textContent;
+            listItem.textContent = selectedText;
             selectedGroupContainer.appendChild(listItem);
         }
+        fetchFilters(selectedText, $('#dropdownXFilter'), 'x');
     }
 
     // Toggle dropdown visibility
@@ -232,13 +286,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateSelectedGroupY() {
         const selectedGroupY = document.querySelector('input[name="group-y[]"]:checked');
+        const selectedText = selectedGroupY.nextElementSibling.textContent;
         selectedGroupYContainer.innerHTML = ''; // Clear current display
         if (selectedGroupY) {
             const listItem = document.createElement('div');
             listItem.className = 'flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-600 rounded';
-            listItem.textContent = selectedGroupY.nextElementSibling.textContent;
+            listItem.textContent = selectedText;
             selectedGroupYContainer.appendChild(listItem);
         }
+        fetchFilters(selectedText, $('#dropdownYFilter'), 'y');
     }
 
     // Toggle dropdown visibility
@@ -254,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 
-            <!--- <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
+            <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
                 <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Type of Chart</h2>
                 <div class="flex flex-col w-full justify-start items-center gap-2">
                     <div class="flex items-center">
@@ -265,8 +321,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         <input id="radio-2" type="radio" value="scatter" name="type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
                         <label for="radio-2" class="ms-2 text-sm font-medium text-gray-900">Scatter</label>
                     </div>
+                    <input type="hidden" name="type" value="test">
                 </div>
-            </div> --->
+            </div>
 
         </div>
         
@@ -334,12 +391,12 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
 <script>
-document.getElementById('select-all').addEventListener('change', function() {
-    var checkboxes = document.querySelectorAll('.filter-checkbox');
-    for (var checkbox of checkboxes) {
-        checkbox.checked = this.checked;
-    }
-});
+// document.getElementById('select-all').addEventListener('change', function() {
+//     var checkboxes = document.querySelectorAll('.filter-checkbox');
+//     for (var checkbox of checkboxes) {
+//         checkbox.checked = this.checked;
+//     }
+// });
 
 $(document).ready(function() {
     // Function to fetch options based on previous selection
@@ -353,7 +410,6 @@ $(document).ready(function() {
             },
             dataType: 'json',
             success: function(response) {
-                console.log(response);
                 let options = '';
                 if (queryType === 'parameter') {
                     $.each(response, function(index, item) {
