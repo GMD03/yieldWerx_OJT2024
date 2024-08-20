@@ -24,6 +24,7 @@
 ## Tools
 - Git
 - Github
+- ODBC Driver
 - Microsoft Drivers for PHP for SQL Server
 - Composer
 - XAMPP
