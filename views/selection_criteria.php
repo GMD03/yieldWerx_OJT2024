@@ -25,26 +25,6 @@
                     'aria-labelledby': 'dropdownFilterButton'
                 });
 
-                // // Add the "Select All" option
-                // const selectAllLi = $('<li>');
-                // const selectAllDiv = $('<div>', {
-                //     class: 'flex items-center p-2 rounded hover:bg-gray-100'
-                // });
-                // const selectAllCheckbox = $('<input>', {
-                //     id: 'select-all',
-                //     type: 'checkbox',
-                //     class: 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500'
-                // });
-                // const selectAllLabel = $('<label>', {
-                //     for: 'select-all',
-                //     class: 'w-full ms-2 text-sm font-medium text-gray-900 rounded',
-                //     text: 'Select All'
-                // });
-
-                // selectAllDiv.append(selectAllCheckbox, selectAllLabel);
-                // selectAllLi.append(selectAllDiv);
-                // ul.append(selectAllLi);
-
                 // Add items from the response
                 response.forEach(item => {
                     const li = $('<li>');
@@ -114,34 +94,7 @@
                     
                 </div>
             </div>
-
-    <!-- Selected filters display -->
-    <div id="selectedFilters" class="text-gray-600 dark:text-gray-300">
-        <span class="font-medium">Selected Filters:</span>
-        <div id="selectedFiltersContainer" class="mt-2 flex space-x-2 overflow-x-auto">
-            <!-- Selected filters will be dynamically inserted here -->
-        </div>
-    </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const dropdownFilter = document.getElementById('dropdownFilter');
-    const selectedFiltersContainer = document.getElementById('selectedFiltersContainer');
-
-    function updateSelectedFilters() {
-        const selectedFilters = document.querySelectorAll('.filter-checkbox:checked');
-        selectedFiltersContainer.innerHTML = ''; // Clear current list
-        selectedFilters.forEach(checkbox => {
-            const listItem = document.createElement('div');
-            listItem.className = 'flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-600 rounded';
-            listItem.textContent = checkbox.nextElementSibling.textContent;
-            selectedFiltersContainer.appendChild(listItem);
-        });
-    }
-
-});
-</script>
 
             
 <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">

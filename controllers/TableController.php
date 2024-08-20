@@ -164,7 +164,7 @@
                 }
 
                 // Create COALESCE expression using only the first table in each program
-                $coalesceExpression = "COALESCE(" . implode(", ", $coalesceParts) . ")";
+                $coalesceExpression = count($coalesceParts) === 1 ? $coalesceParts[0] : "COALESCE(" . implode(", ", $coalesceParts) . ")";
                 $columnName = str_replace('_', ' ', $column); // Convert column name to display name
                 $this->static_columns[] = "{$coalesceExpression} AS '{$columnName}'";
             }
@@ -176,7 +176,7 @@
                 foreach ($tables as $table) {
                     $coalesceParts[] = "{$table}.{$column}";
                 }
-                $coalesceExpression = "COALESCE(" . implode(", ", $coalesceParts) . ")";
+                $coalesceExpression = count($coalesceParts) === 1 ? $coalesceParts[0] : "COALESCE(" . implode(", ", $coalesceParts) . ")";
                 $columnName = str_replace('_', ' ', $column); // Convert column name to display name
                 $this->dynamic_columns[] = "{$coalesceExpression} AS '{$columnName}'";
             }
