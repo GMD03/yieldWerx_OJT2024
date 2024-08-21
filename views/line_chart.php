@@ -216,6 +216,11 @@ $numDistinctGroups = count($groupedData);
 
 ?>
 
+<div class="fixed top-24 left-4">
+    <button onclick="window.history.back()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-150 ease-in-out flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Go Back
+</div>
+
 <div class="fixed top-24 right-4">
     <div class="flex w-full justify-center items-center gap-2">
         <!-- Probe Count Button and Dropdown -->

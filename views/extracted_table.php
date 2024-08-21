@@ -5,8 +5,12 @@
 ?>
 
 <div class="flex justify-between items-center my-4 px-4">
-        <button onclick="window.history.back()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-150 ease-in-out">Back</button>
-        <a href="index.php" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75 transition duration-150 ease-in-out">Reset</a>
+    <button onclick="window.history.back()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-150 ease-in-out flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Go Back
+    </button>
+    <a href="index.php" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75 transition duration-150 ease-in-out flex items-center">
+        <i class="fas fa-redo mr-2"></i> Reset Selection
+    </a>
 </div>
 
 <style>
