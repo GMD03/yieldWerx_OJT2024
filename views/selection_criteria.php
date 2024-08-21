@@ -3,8 +3,7 @@
 
     $selectionController = new SelectionController();
     $facilities = $selectionController->getFacilities();
-    $lotGroups = $selectionController->getLotHeaders();
-    $waferGroups = $selectionController->getWaferHeaders();
+    $groups = $selectionController->getWaferHeaders();
     $abbrev = $selectionController->getProbingFilter();
 ?>
 
@@ -104,19 +103,9 @@ document.addEventListener('DOMContentLoaded', function () {
             </svg>
         </button>
 
-        <div id="dropdownGroupX" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-200 rounded-lg shadow">
+        <div id="dropdownGroupX" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
             <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
-                <?php foreach ($lotGroups as $group): ?>
-                <li>
-                    <div class="flex items-center p-2 rounded hover:bg-gray-100">
-                        <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-x[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
-                        <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
-                    </div>
-                </li>
-                <?php endforeach; ?>
-            </ul>
-            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
-                <?php foreach ($waferGroups as $group): ?>
+                <?php foreach ($groups as $group): ?>
                 <li>
                     <div class="flex items-center p-2 rounded hover:bg-gray-100">
                         <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-x[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
@@ -186,19 +175,9 @@ document.addEventListener('DOMContentLoaded', function () {
         </button>
 
         <!-- Dropdown menu -->
-        <div id="dropdownGroupY" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-200 rounded-lg shadow">
-            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
-                <?php foreach ($lotGroups as $group): ?>
-                <li>
-                    <div class="flex items-center p-2 rounded hover:bg-gray-100">
-                        <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-y[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
-                        <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
-                    </div>
-                </li>
-                <?php endforeach; ?>
-            </ul>
-            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
-                <?php foreach ($waferGroups as $group): ?>
+        <div id="dropdownGroupY" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
+            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupYButton">
+                <?php foreach ($groups as $group): ?>
                 <li>
                     <div class="flex items-center p-2 rounded hover:bg-gray-100">
                         <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-y[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
@@ -254,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 
-            <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
+            <!--- <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
                 <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Type of Chart</h2>
                 <div class="flex flex-col w-full justify-start items-center gap-2">
                     <div class="flex items-center">
@@ -266,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <label for="radio-2" class="ms-2 text-sm font-medium text-gray-900">Scatter</label>
                     </div>
                 </div>
-            </div>
+            </div> --->
 
         </div>
         
@@ -430,6 +409,5 @@ $(document).ready(function() {
         $('#criteriaForm')[0].reset();
         $('#work_center, #device_name, #test_program, #lot, #wafer, #parameter').html('');
     });
-    
 });
 </script>
