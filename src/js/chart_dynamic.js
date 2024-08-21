@@ -231,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             for (const combination in groupedData) {
                 if (hasXColumn && hasYColumn) {
-                    console.log(groupedData[combination]);
                     for (const yGroup in groupedData[combination]) {
                         for (const xGroup in groupedData[combination][yGroup]) {
                             const chartId = `chartXY_${combination}_${yGroup}_${xGroup}`;
@@ -294,5 +293,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial chart creation with the default margin
     createCharts(groupedData, isSingleParameter, isSingleParameter ? createLineChart : createScatterChart);
-    console.log(groupedData);
 });

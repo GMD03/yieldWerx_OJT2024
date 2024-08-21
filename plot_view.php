@@ -63,7 +63,7 @@
                 include('views/line_chart.php');
             }
             else {
-                include('views/scatter_plot-test.php');
+                include('views/scatter_plot.php');
             }
             
             ?>

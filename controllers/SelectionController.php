@@ -100,6 +100,21 @@
             return $options;
         }
 
+        public function getFilters($columnName)
+        {
+            $query = "SELECT distinct $columnName FROM LOT l
+                       join WAFER w on w.Lot_Sequence = l.Lot_Sequence";
+
+            $options = [];
+            $stmt = sqlsrv_query($this->conn, $query);
+            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                $options[] = array_values($row)[0];
+            }
+            sqlsrv_free_stmt($stmt);
+            
+            return $options;
+        }
+
         public function getWaferHeaders()
         {
             $query = "SELECT TOP(1) * FROM WAFER";

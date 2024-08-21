@@ -8,10 +8,11 @@
         private $params = [];
         private $where_clause = '';
         private $join_table_clause = '';
-        private $case_clause = '';
         public $tables = [];
         private $headers = [];
         private $all_columns = [];
+        private $static_columns = [];
+        private $dynamic_columns = [];
 
 
         public function __construct() {
@@ -29,8 +30,7 @@
                 "l.program_name" => isset($_GET['test_program']) ? $_GET['test_program'] : [],
                 "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
                 "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
-                "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : [],
-                "p.abbrev" => isset($_GET['abbrev']) ? $_GET['abbrev'] : []
+                "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
             ];
 
             // Prepare SQL filters
@@ -40,6 +40,26 @@
                     $placeholders = implode(',', array_fill(0, count($values), '?'));
                     $sql_filters[] = "$key IN ($placeholders)";
                     $this->params = array_merge($this->params, $values);
+                }
+            }
+
+            $groupXY = ['x' => isset($_GET["group-x"]) ? $_GET["group-x"][0] : null,
+                        'y' => isset($_GET["group-y"]) ? $_GET["group-y"][0] : null];
+
+            $filterXY = ['x' => isset($_GET['filter-x']) ? $_GET['filter-x'] : [],
+                         'y' => isset($_GET['filter-y']) ? $_GET['filter-y'] : []];
+
+            foreach ($groupXY as $key => $value) {
+                if (!empty($value) && !empty($filterXY[$key])) {
+                    if ($value === "Program_Name") {
+                        $value = "l.Program_Name";
+                    } else if ($value === "Probing_Sequence") {
+                        $value = "p.abbrev";
+                    }
+
+                    $placeholders = implode(',', array_fill(0, count($filterXY[$key]), '?'));
+                    $sql_filters[] = "$value IN ($placeholders)";
+                    $this->params = array_merge($this->params, $filterXY[$key]);
                 }
             }
 
@@ -58,19 +78,8 @@
             
             $stmt = sqlsrv_query($this->conn, $query, $this->params);
             if ($stmt === false) { die('Query failed: ' . print_r(sqlsrv_errors(), true)); }
-            $this->tables = [];
             while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $this->tables[] = $row['Table_Name']; }
-            sqlsrv_free_stmt($stmt); // Free the count statement here    
-
-            $joins = [];
-            for ($i = 0; $i < count($this->tables); $i++) {
-                $joins[] = "LEFT JOIN " . $this->tables[$i] . " ON " . $this->tables[$i] . ".Wafer_Sequence = w.Wafer_Sequence";
-            }
-
-            if (!empty($joins)) {
-                $this->join_table_clause = implode("\n", $joins);
-            }
-
+            sqlsrv_free_stmt($stmt); // Free the count statement here   
             
             // Define the query to get the mappings
             $query = "
@@ -113,24 +122,64 @@
                 }
             }
 
-            // Generate SQL CASE statements
-            $caseStatements = [];
+            $joins = [];
+            $programTracking = []; // To track the first table in each program
 
-            foreach ($columnToTables as $column => $tables) {
-                $whenClauses = [];
-                foreach ($tables as $tableName) {
-                    $programName = $tableToProgram[$tableName][0];
-                    $whenClauses[] = "WHEN l.Program_Name = '$programName' AND tm.Column_Name = '$column' THEN $tableName.$column";
+            foreach ($this->tables as $currentTable) {
+                $programName = $tableToProgram[$currentTable][0]; // Get the program name for the current table
+
+                if (!isset($programTracking[$programName])) {
+                    // This is the first table in the program
+                    $joins[] = "LEFT JOIN " . $currentTable . " ON " . $currentTable . ".Wafer_Sequence = w.Wafer_Sequence AND l.Program_Name = '{$programName}'";
+                    $programTracking[$programName] = $currentTable; // Track this table as the first in the program
+                } else {
+                    // Subsequent table in the same program
+                    $joins[] = "LEFT JOIN " . $currentTable . " ON " . $currentTable . ".Die_Sequence = " . $programTracking[$programName] . ".Die_Sequence AND l.Program_Name = '{$programName}'";
                 }
-                $caseStatements[] = "
-                    CASE 
-                        " . implode(' ', $whenClauses) . " 
-                        ELSE NULL 
-                    END AS '$column'";
+            }
+
+            if (!empty($joins)) {
+                $this->join_table_clause = implode("\n", $joins);
+            }
+
+            // Generate static and dynamic columns for Unit_Number to Test Parameters
+            $columns = ['Unit_Number','X','Y','Head_Number','Site_Number','HBin_Number','SBin_Number','Tests_Executed','Test_Time','DieType_Sequence','IsHomeDie','IsAlignmentDie','IsIncludeInYield','IsIncludeInDieCount','ReticleNumber','ReticlePositionRow','ReticlePositionColumn','ReticleActiveSitesCount','ReticleSitePositionRow','ReticleSitePositionColumn','PartNumber','PartName','DieID','DieName','SINF','UserDefinedAttribute1','UserDefinedAttribute2','UserDefinedAttribute3','DieStartTime','DieEndTime'];
+
+            $this->static_columns = [];
+            $firstTablePerProgram = []; // To track the first table for each program
+
+            foreach ($this->tables as $table) {
+                $programName = $tableToProgram[$table][0]; // Get the program name for the table
+
+                // Track the first table for each program
+                if (!isset($firstTablePerProgram[$programName])) {
+                    $firstTablePerProgram[$programName] = $table;
+                }
+            }
+
+            foreach ($columns as $column) {
+                $coalesceParts = [];
+
+                foreach ($firstTablePerProgram as $programName => $table) {
+                    $coalesceParts[] = "{$table}.{$column}";
+                }
+
+                // Create COALESCE expression using only the first table in each program
+                $coalesceExpression = count($coalesceParts) === 1 ? $coalesceParts[0] : "COALESCE(" . implode(", ", $coalesceParts) . ")";
+                $columnName = str_replace('_', ' ', $column); // Convert column name to display name
+                $this->static_columns[] = "{$coalesceExpression} AS '{$columnName}'";
             }
             
-            if (!empty($caseStatements)) {
-                $this->case_clause = implode(",", $caseStatements);
+            $this->dynamic_columns = [];
+            foreach ($columnToTables as $column => $tables) {
+                // Generate COALESCE statement for each column with all specified tables
+                $coalesceParts = [];
+                foreach ($tables as $table) {
+                    $coalesceParts[] = "{$table}.{$column}";
+                }
+                $coalesceExpression = count($coalesceParts) === 1 ? $coalesceParts[0] : "COALESCE(" . implode(", ", $coalesceParts) . ")";
+                $columnName = str_replace('_', ' ', $column); // Convert column name to display name
+                $this->dynamic_columns[] = "{$coalesceExpression} AS '{$columnName}'";
             }
         }
 
@@ -192,8 +241,7 @@
         public function writeTableData()
         {
             // Retrieve all records with filters
-            $query = "SELECT l.Facility_ID 'Facility', l.Work_Center 'Work Center', l.Part_Type 'Device Name', l.Program_Name 'Test Program', l.Lot_ID 'Lot ID', l.Test_Temprature 'Lot Test Temprature', w.Wafer_ID 'Wafer ID', w.Wafer_Start_Time 'Wafer Start Time', w.Wafer_Finish_Time 'Wafer Finish Time', ". $this->tables[0] .".Unit_Number 'Unit Number', ". $this->tables[0] .".X , ". $this->tables[0] .".Y, ". $this->tables[0] .".Head_Number 'Head Number', ". $this->tables[0] .".Site_Number 'Site Number', ". $this->tables[0] .".HBin_Number 'Hard Bin No', ". $this->tables[0] .".SBin_Number 'Soft Bin No', ". $this->tables[0] .".Tests_Executed 'Tests Executed', ". $this->tables[0] .".Test_Time 'Test Time (ms)', ". $this->tables[0] .".DieType_Sequence 'Die Type', ". $this->tables[0] .".IsHomeDie 'Home Die', ". $this->tables[0] .".IsAlignmentDie 'Alignment Die', ". $this->tables[0] .".IsIncludeInYield 'Include In Yield', ". $this->tables[0] .".IsIncludeInDieCount 'Include In Die Count', ". $this->tables[0] .".ReticleNumber 'Reticle Number', ". $this->tables[0] .".ReticlePositionRow 'Reticle Position Row', ". $this->tables[0] .".ReticlePositionColumn 'Reticle Position Column', ". $this->tables[0] .".ReticleActiveSitesCount 'Reticle Active Sites Count', ". $this->tables[0] .".ReticleSitePositionRow 'Reticle Site Position Row', ". $this->tables[0] .".ReticleSitePositionColumn 'Reticle Site Position Column', ". $this->tables[0] .".PartNumber 'Part Number', ". $this->tables[0] .".PartName 'Part Name', ". $this->tables[0] .".DieID 'Die ID', ". $this->tables[0] .".DieName 'Die Name', ". $this->tables[0] .".SINF 'SINF', ". $this->tables[0] .".UserDefinedAttribute1 'User Defined Attribute 1', ". $this->tables[0] .".UserDefinedAttribute2 'User Defined Attribute 2', ". $this->tables[0] .".UserDefinedAttribute3 'User Defined Attribute 3', ". $this->tables[0] .".DieStartTime 'Die Start Time', ". $this->tables[0] .".DieEndTime 'Die End Time', 
-                    $this->case_clause 
+            $query = "SELECT l.Facility_ID 'Facility', l.Work_Center 'Work Center', l.Part_Type 'Device Name', l.Program_Name 'Test Program', l.Lot_ID 'Lot ID', l.Test_Temprature 'Lot Test Temprature', w.Wafer_ID 'Wafer ID', w.Wafer_Start_Time 'Wafer Start Time', w.Wafer_Finish_Time 'Wafer Finish Time', ". implode(", ", array_merge($this->static_columns, $this->dynamic_columns)) ."
                     FROM LOT l
                     JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
                     JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
