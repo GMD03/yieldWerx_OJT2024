@@ -139,7 +139,7 @@ $join_table_clause = '';
                 foreach ($tables as $table) {
                     $coalesceParts[] = "{$table}.{$column}";
                 }
-                $dynamic_columns[$column] = count($coalesceParts) === 1 ? $coalesceParts[0] : "COALESCE(" . implode(", ", $coalesceParts) . ")";
+                $dynamic_columns[$column] = "COALESCE(" . implode(", ", $coalesceParts) . ")";
             }
 
 $sort_clause = '';

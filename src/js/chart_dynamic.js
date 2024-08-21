@@ -109,12 +109,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function calculateCorrelation(data) {
+        const n = data.length;
+        if (n === 0) return { r: null, r2: null };
+    
+        const sumX = data.reduce((sum, point) => sum + point.x, 0);
+        const sumY = data.reduce((sum, point) => sum + point.y, 0);
+        const sumXY = data.reduce((sum, point) => sum + point.x * point.y, 0);
+        const sumX2 = data.reduce((sum, point) => sum + point.x * point.x, 0);
+        const sumY2 = data.reduce((sum, point) => sum + point.y * point.y, 0);
+    
+        const numerator = (n * sumXY) - (sumX * sumY);
+        const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+    
+        if (denominator === 0) return { r: 0, r2: 0 };
+    
+        const r = numerator / denominator;
+        const r2 = r * r;
+    
+        return { r, r2 };
+    }
+    
+
     function createScatterChart(ctx, data, label, minX, maxX, minY, maxY) {
+        const { r, r2 } = calculateCorrelation(data);
+        const correlationText = `r: ${r.toFixed(2)}, r²: ${r2.toFixed(2)}`;
+    
         return new Chart(ctx, {
             type: 'scatter',
             data: {
                 datasets: [{
-                    label: label,
+                    label: `${label} (${correlationText})`,
                     data: data,
                     backgroundColor: 'rgba(115, 33, 98, 0.6)',
                     borderColor: 'rgba(82, 16, 69, 1)',
@@ -206,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             for (const combination in groupedData) {
                 if (hasXColumn && hasYColumn) {
-                    console.log(groupedData[combination]);
                     for (const yGroup in groupedData[combination]) {
                         for (const xGroup in groupedData[combination][yGroup]) {
                             const chartId = `chartXY_${combination}_${yGroup}_${xGroup}`;
@@ -269,5 +293,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial chart creation with the default margin
     createCharts(groupedData, isSingleParameter, isSingleParameter ? createLineChart : createScatterChart);
-    console.log(groupedData);
 });
