@@ -3,7 +3,8 @@
 
     $selectionController = new SelectionController();
     $facilities = $selectionController->getFacilities();
-    $groups = $selectionController->getWaferHeaders();
+    $lotGroups = $selectionController->getLotHeaders();
+    $waferGroups = $selectionController->getWaferHeaders();
     $abbrev = $selectionController->getProbingFilter();
 ?>
 
@@ -108,9 +109,19 @@
             </svg>
         </button>
 
-        <div id="dropdownGroupX" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
+        <div id="dropdownGroupX" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-200 rounded-lg shadow">
             <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
-                <?php foreach ($groups as $group): ?>
+                <?php foreach ($lotGroups as $group): ?>
+                <li>
+                    <div class="flex items-center p-2 rounded hover:bg-gray-100">
+                        <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-x[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                        <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
+                    </div>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
+                <?php foreach ($waferGroups as $group): ?>
                 <li>
                     <div class="flex items-center p-2 rounded hover:bg-gray-100">
                         <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-x[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
@@ -182,9 +193,19 @@ document.addEventListener('DOMContentLoaded', function () {
         </button>
 
         <!-- Dropdown menu -->
-        <div id="dropdownGroupY" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-100 rounded-lg shadow">
-            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupYButton">
-                <?php foreach ($groups as $group): ?>
+        <div id="dropdownGroupY" class="z-10 hidden w-auto h-64 overflow-y-auto bg-white divide-y divide-gray-200 rounded-lg shadow">
+            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
+                <?php foreach ($lotGroups as $group): ?>
+                <li>
+                    <div class="flex items-center p-2 rounded hover:bg-gray-100">
+                        <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-y[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                        <label for="checkbox-item-<?= htmlspecialchars($group) ?>" class="w-full ms-2 text-sm font-medium text-gray-900 rounded"><?= htmlspecialchars($group) ?></label>
+                    </div>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownGroupXButton">
+                <?php foreach ($waferGroups as $group): ?>
                 <li>
                     <div class="flex items-center p-2 rounded hover:bg-gray-100">
                         <input id="checkbox-item-<?= htmlspecialchars($group) ?>" name="group-y[]" type="radio" value="<?= htmlspecialchars($group) ?>" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
@@ -417,5 +438,6 @@ $(document).ready(function() {
         $('#criteriaForm')[0].reset();
         $('#work_center, #device_name, #test_program, #lot, #wafer, #parameter').html('');
     });
+    
 });
 </script>
