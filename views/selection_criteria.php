@@ -268,11 +268,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="flex flex-col w-full justify-start items-center gap-2">
                     <div class="flex items-center">
                         <input id="radio-1" type="radio" value="line" name="type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
-                        <label for="radio-1" class="ms-2 text-sm font-medium text-gray-900">Line</label>
+                        <label for="radio-1" class="ms-2 text-sm font-medium text-gray-900">Line Chart</label>
                     </div>
                     <div class="flex items-center">
                         <input id="radio-2" type="radio" value="scatter" name="type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
-                        <label for="radio-2" class="ms-2 text-sm font-medium text-gray-900">Scatter</label>
+                        <label for="radio-2" class="ms-2 text-sm font-medium text-gray-900">XY Scatter Plot</label>
                     </div>
                     <div class="flex items-center">
                         <input id="radio-2" type="radio" value="cp" name="type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
@@ -332,11 +332,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 </select>
             </div>
 
-            <div class="col-span-3">
-                <label for="parameter" class="block text-sm font-medium text-gray-700">Parameter</label>
-                <select id="parameter" name="parameter[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                    <!-- Options will be populated based on wafer selection -->
-                </select>
+            <div class="flex flex-col w-full col-span-3">
+                <div class="flex w-full">
+                    <label for="parameter" class="text-sm font-medium text-gray-700 block">Parameter</label>
+                    <label for="parameter-x" class="text-sm font-medium text-gray-700 w-1/2 hidden">X Parameter</label>
+                    <label for="parameter-y" class="text-sm font-medium text-gray-700 w-1/2 ml-6 hidden">Y Parameter</label>
+                    <button id="parameter-button" type="button" class="ml-auto py-0.5 px-1.5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-gray-700 focus:z-10 focus:ring-4 focus:ring-gray-100">&#x2BC8;</button>
+                </div>
+                
+                <div id="parameter-1" class="w-full" style="display: flex">
+                    <select id="parameter" name="parameter[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                        <!-- Options will be populated based on wafer selection -->    
+                    </select>
+                </div>
+                
+                <div id="parameter-2" class="w-full" style="display: none">
+                    <select id="parameter-x" name="parameter-x[]" size="5" class="bg-white mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                        <!-- Options will be populated based on wafer selection -->
+                    </select>
+                    <select id="parameter-y" name="parameter-y[]" size="5" class="bg-white mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                        <!-- Options will be populated based on wafer selection -->
+                    </select>
+                </div>
             </div>
         </div>
         <div class="text-center w-full flex justify-start gap-4">
@@ -367,6 +384,7 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 let options = '';
+                targetElement.html('');
                 if (queryType === 'parameter') {
                     $.each(response, function(index, item) {
                         options += `<option value="${item.value}">${item.display}</option>`;
@@ -398,49 +416,90 @@ $(document).ready(function() {
     $('#facility').change(function() {
         const selectedFacility = $(this).val();
         selectedValues.Facility_ID = selectedFacility;
-        console.log(selectedValues);
         fetchOptions(selectedValues, $('#work_center'), 'work_center');
     });
 
     $('#work_center').change(function() {
         const selectedWorkCenter = $(this).val();
         selectedValues.Work_Center = selectedWorkCenter;
-        console.log(selectedValues);
         fetchOptions(selectedValues, $('#device_name'), 'device_name');
     });
 
     $('#device_name').change(function() {
         const selectedDeviceName = $(this).val();
         selectedValues.Part_Type = selectedDeviceName;
-        console.log(selectedValues);
         fetchOptions(selectedValues, $('#test_program'), 'test_program');
     });
 
     $('#test_program').change(function() {
         const selectedTestProgram = $(this).val();
         selectedValues.Program_Name = selectedTestProgram;
-        console.log(selectedValues);
         fetchOptions(selectedValues, $('#lot'), 'lot');
     });
 
     $('#lot').change(function() {
         const selectedLot = $(this).val();
         selectedValues.Lot_ID = selectedLot;
-        console.log(selectedValues);
         fetchOptions(selectedValues, $('#wafer'), 'wafer');
     });
 
     $('#wafer').change(function() {
         const selectedWafer = $(this).val();
         selectedValues.Wafer_ID = selectedWafer;
-        console.log(selectedValues);
         fetchOptions(selectedValues, $('#parameter'), 'parameter');
+    });
+
+    $('#wafer').change(function() {
+        const selectedWafer = $(this).val();
+        selectedValues.Wafer_ID = selectedWafer;
+        fetchOptions(selectedValues, $('#parameter-x'), 'parameter');
+    });
+
+    $('#wafer').change(function() {
+        const selectedWafer = $(this).val();
+        selectedValues.Wafer_ID = selectedWafer;
+        fetchOptions(selectedValues, $('#parameter-y'), 'parameter');
     });
 
     // Reset button functionality
     $('#resetButton').click(function() {
         $('#criteriaForm')[0].reset();
         $('#work_center, #device_name, #test_program, #lot, #wafer, #parameter').html('');
+    });
+
+    $('#parameter-button').click(function() {
+        const div1 = $('#parameter-1');
+        const div2 = $('#parameter-2');
+        const parameterLabel = $('label[for="parameter"]');
+        const xParameterLabel = $('label[for="parameter-x"]');
+        const yParameterLabel = $('label[for="parameter-y"]');
+
+        if (div1.css('display') === 'flex') {
+            div1.css('display', 'none');
+            parameterLabel.css('display', 'none');
+            
+            div2.css('display', 'flex');
+            xParameterLabel.css('display', 'block');
+            yParameterLabel.css('display', 'block');
+            $(this).html('&#x2BC7;');
+        } else {
+            div1.css('display', 'flex');
+            parameterLabel.css('display', 'block');
+            
+            div2.css('display', 'none');
+            xParameterLabel.css('display', 'none');
+            yParameterLabel.css('display', 'none');
+            $(this).html('&#x2BC8;');
+        }
+
+        const selectedWafer = $('#wafer').val();
+        if (!empty(selectedWafer)) {
+            selectedValues.Wafer_ID = selectedWafer;
+            fetchOptions(selectedValues, $('#parameter'), 'parameter');
+            fetchOptions(selectedValues, $('#parameter-x'), 'parameter');
+            fetchOptions(selectedValues, $('#parameter-y'), 'parameter');
+        }
+        
     });
     
 });

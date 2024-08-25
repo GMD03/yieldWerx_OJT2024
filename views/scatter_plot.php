@@ -12,8 +12,22 @@ $filters = [
     "l.program_name" => isset($_GET['test_program']) ? $_GET['test_program'] : [],
     "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
     "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
-    "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
+    "tm.Column_Name" => []
 ];
+
+$xyParameters = [];
+$xParameters = [];
+$yParameters = [];
+
+if (isset($_GET['parameter'])) {
+    $filters["tm.Column_Name"] = $_GET['parameter'];
+    $xyParameters = $_GET['parameter'];
+}
+else if (isset($_GET['parameter-x']) && isset($_GET['parameter-y'])) {
+    $filters["tm.Column_Name"] = array_merge($_GET['parameter-x'], $_GET['parameter-y']);
+    $xParameters = $_GET['parameter-x'];
+    $yParameters = $_GET['parameter-y'];
+}
 
 $xColumn = isset($_GET["group-x"]) ? $_GET["group-x"][0] : null;
 $yColumn = isset($_GET["group-y"]) ? $_GET["group-y"][0] : null;
@@ -234,9 +248,18 @@ if ($isSingleParameter) {
 }
 else {
     $combinations = [];
-    foreach ($filters['tm.Column_Name'] as $i => $parameter) {
-        for ($j = $i + 1; $j < count($filters['tm.Column_Name']); $j++) {
-            $combinations[] = [$parameter, $filters['tm.Column_Name'][$j]];
+    if ($xyParameters) {
+        foreach ($xyParameters as $i => $parameter) {
+            for ($j = $i + 1; $j < count($xyParameters); $j++) {
+                $combinations[] = [$parameter, $xyParameters[$j]];
+            }
+        }
+    }
+    else {
+        foreach ($xParameters as $x) {
+            foreach ($yParameters as $y) {
+                $combinations[] = [$x, $y];
+            }
         }
     }
 
