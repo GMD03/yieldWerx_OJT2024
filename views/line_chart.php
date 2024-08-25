@@ -12,8 +12,15 @@ $filters = [
     "l.program_name" => isset($_GET['test_program']) ? $_GET['test_program'] : [],
     "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
     "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
-    "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
+    "tm.Column_Name" => []
 ];
+
+if (isset($_GET['parameter'])) {
+    $filters["tm.Column_Name"] = $_GET['parameter'];
+}
+else if (isset($_GET['parameter-x']) && isset($_GET['parameter-y'])) {
+    $filters["tm.Column_Name"] = array_merge($_GET['parameter-x'], $_GET['parameter-y']);
+}
 
 $xColumn = isset($_GET["group-x"]) ? $_GET["group-x"][0] : null;
 $yColumn = isset($_GET["group-y"]) ? $_GET["group-y"][0] : null;
@@ -150,15 +157,6 @@ foreach ($parameters as $parameter) {
         'ycol' => []
     ];
 
-    $xLabel = 'Series';
-    $yLabel = $parameter;
-
-    $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
-    $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
-    $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
-    $testNameX = $xLabel;
-    sqlsrv_free_stmt($testNameStmtY);
-
     $tsql = "
     SELECT 
         w.Wafer_ID, 
@@ -251,6 +249,15 @@ foreach ($parameters as $parameter) {
 <!-- Iterate and generate chart canvases -->
 <?php
 foreach ($groupedData as $parameter => $data) {
+    $xLabel = 'Series';
+    $yLabel = $parameter;
+
+    $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
+    $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
+    $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
+    $testNameX = $xLabel;
+    sqlsrv_free_stmt($testNameStmtY);
+
     echo '<div class="p-4">';
     echo '<div class="dark:border-gray-700 flex flex-col items-center">';
     echo '<div class="max-w-fit p-6 border-b-2 border-2">';
@@ -259,6 +266,9 @@ foreach ($groupedData as $parameter => $data) {
     echo '</div>';
 
     if (isset($xColumn) && isset($yColumn)) {
+        echo '<div class="flex flex-row items-center justify-center w-full">
+                <div class="-rotate-90"><h2 class="text-center text-xl font-semibold">'.$yColumn.'</h2></div>
+                <div class="flex flex-col items-center justify-center w-full">';
         $yGroupKeys = array_keys($data);
         $lastYGroup = end($yGroupKeys);
         foreach ($data as $yGroup => $xGroupData) {
@@ -276,7 +286,12 @@ foreach ($groupedData as $parameter => $data) {
             }
             echo '</div></div>';
         }
+        echo '<h3 class="text-center text-lg font-semibold">'.$xColumn.'</h3>
+            </div>
+        </div>';
     } elseif (isset($xColumn)) {
+        echo '<div class="flex flex-row items-center justify-center w-full">
+                <div class="flex flex-col items-center justify-center w-full">';
         echo '<div class="flex flex-row items-center justify-center w-full">';
         echo '<div class="grid gap-2 grid-cols-' . count($data) . '">';
         foreach ($data as $xGroup => $chartData) {
@@ -286,7 +301,13 @@ foreach ($groupedData as $parameter => $data) {
             echo '<h3 class="text-center text-lg font-semibold">' . $xGroup . '</h3></div>';
         }
         echo '</div></div>';
+        echo '<h3 class="text-center text-lg font-semibold">'.$xColumn.'</h3>
+            </div>
+        </div>';
     } elseif (isset($yColumn)) {
+        echo '<div class="flex flex-row items-center justify-center w-full">
+                <div class="-rotate-90"><h2 class="text-center text-xl font-semibold">'.$yColumn.'</h2></div>
+                <div class="flex flex-col items-center justify-center w-full">';
         echo '<div class="flex flex-row items-center justify-center w-full">';
         echo '<div class="grid gap-2 grid-cols-1">';
         foreach ($data as $yGroup => $chartData) {
@@ -297,6 +318,8 @@ foreach ($groupedData as $parameter => $data) {
             echo '</div>';
         }
         echo '</div></div>';
+        echo '</div>
+            </div>';
     } else {
         $chartId = "chartXY_{$parameter}_all";
         echo '<div class="flex items-center justify-center w-full">';
