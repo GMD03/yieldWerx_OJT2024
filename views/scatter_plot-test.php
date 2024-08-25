@@ -432,7 +432,7 @@ foreach ($combinations as $index => $combination) {
 <?php
     }
 } else { ?>
-<h1 class="text-center text-2xl font-bold w-full mb-6">XY Line Chart</h1>
+<h1 class="text-center text-2xl font-bold w-full mb-6">Line Chart</h1>
  <div class="p-4">
     <div class="dark:border-gray-700 flex flex-col items-center">
         <div class="max-w-fit p-6 border-b-2 border-2">

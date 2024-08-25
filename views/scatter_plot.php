@@ -209,26 +209,24 @@ if ($isSingleParameter) {
             } else {
                 $globalCounters['ycol'][$yGroup][$xGroup]++;
             }
-            $groupedData[$yGroup][$xGroup][] = ['x' => $globalCounters['ycol'][$yGroup][$xGroup], 'y' => $yValue];
+            $groupedData[$parameter][$yGroup][$xGroup][] = ['x' => $globalCounters['ycol'][$yGroup][$xGroup], 'y' => $yValue];
         } elseif ($xColumn && !$yColumn) {
             if (!isset($globalCounters['xcol'][$yGroup][$xGroup])) {
                 $globalCounters['xcol'][$yGroup][$xGroup] = count($groupedData[$yGroup][$xGroup] ?? []) + 1;
             } else {
                 $globalCounters['xcol'][$yGroup][$xGroup]++;
             }
-            $groupedData[$xGroup][$yGroup][] = ['x' => $globalCounters['xcol'][$yGroup][$xGroup], 'y' => $yValue];
+            $groupedData[$parameter][$xGroup][$yGroup][] = ['x' => $globalCounters['xcol'][$yGroup][$xGroup], 'y' => $yValue];
         } elseif (!$xColumn && $yColumn) {
-
             if (!isset($globalCounters['ycol'][$yGroup])) {
                 $globalCounters['ycol'][$yGroup] = count($groupedData[$yGroup] ?? []) + 1;
             } else {
                 $globalCounters['ycol'][$yGroup]++;
             }
-            $groupedData[$yGroup][] = ['x' => $globalCounters['ycol'][$yGroup], 'y' => $yValue];
+            $groupedData[$parameter][$yGroup][] = ['x' => $globalCounters['ycol'][$yGroup], 'y' => $yValue];
         } else {
-
             $globalCounters['all']++;
-            $groupedData['all'][] = ['x' => $globalCounters['all'], 'y' => $yValue];
+            $groupedData[$parameter]['all'][] = ['x' => $globalCounters['all'], 'y' => $yValue];
         }
     }
 
@@ -437,7 +435,7 @@ foreach ($combinations as $index => $combination) {
 <?php
     }
 } else { ?>
-<h1 class="text-center text-2xl font-bold w-full mb-6">XY Line Chart</h1>
+<h1 class="text-center text-2xl font-bold w-full mb-6">Line Chart</h1>
  <div class="p-4">
     <div class="dark:border-gray-700 flex flex-col items-center">
         <div class="max-w-fit p-6 border-b-2 border-2">
