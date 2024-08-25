@@ -212,8 +212,6 @@ foreach ($parameters as $parameter) {
     sqlsrv_free_stmt($stmt);
 }
 
-$numDistinctGroups = count($groupedData);
-
 ?>
 
 <div class="fixed top-24 left-4">
