@@ -30,8 +30,15 @@
                 "l.program_name" => isset($_GET['test_program']) ? $_GET['test_program'] : [],
                 "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
                 "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
-                "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
+                "tm.Column_Name" => []
             ];
+
+            if (isset($_GET['parameter'])) {
+                $this->filters["tm.Column_Name"] = $_GET['parameter'];
+            }
+            else if (isset($_GET['parameter-x']) && isset($_GET['parameter-y'])) {
+                $this->filters["tm.Column_Name"] = array_merge($_GET['parameter-x'], $_GET['parameter-y']);
+            }
 
             // Prepare SQL filters
             $sql_filters = [];

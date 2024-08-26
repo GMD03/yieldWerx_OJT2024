@@ -62,6 +62,9 @@
             if (isset($_GET["type"]) && $_GET['type'] === "line") {
                 include('views/line_chart.php');
             }
+            else if (isset($_GET["type"]) && $_GET['type'] === "cp") {
+                include('views/cumulative_probability.php');
+            }
             else {
                 include('views/scatter_plot.php');
             }

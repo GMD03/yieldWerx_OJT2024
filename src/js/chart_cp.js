@@ -39,9 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else {
-            const data = dataGroups['all'];
-            allXValues = allXValues.concat(extractValues(data, 'x'));
-            allYValues = allYValues.concat(extractValues(data, 'y'));
+            for (const parameter in dataGroups) {
+                const data = dataGroups[parameter]['all'];
+                allXValues = allXValues.concat(extractValues(data, 'x'));
+                allYValues = allYValues.concat(extractValues(data, 'y'));
+            }
         }
 
         const minXValue = allXValues.length > 0 ? Math.min(...allXValues) : 0;
@@ -60,18 +62,19 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    function createLineChart(ctx, data, label, minX, maxX, minY, maxY) {
+    function createCumulativeProbabilityChart(ctx, data, label, minX, maxX, minY, maxY) {
         return new Chart(ctx, {
             type: 'line',
             data: {
                 datasets: [{
                     label: label,
                     data: data,
-                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(115, 33, 98, 0.6)',
+                    borderColor: 'rgba(82, 16, 69, 1)',
                     borderWidth: 1,
                     fill: false,
                     pointRadius: 1,
+                    tension: 0.3
                 }]
             },
             options: {
@@ -107,9 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-        function createCharts(groupedData, createChartFunc, marginPercentage = 0.05) {
+        function createCharts(groupedData, createChartFunc, marginPercentage = 0) {
             const { minX, maxX, minY, maxY } = getMinMaxWithMargin(groupedData, marginPercentage);
-    
+
             for (const parameter in groupedData) {
                 if (hasXColumn && hasYColumn) {
                     for (const yGroup in groupedData[parameter]) {
@@ -147,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const canvasElement = document.getElementById(chartId);
                     if (canvasElement) {
                         const ctx = canvasElement.getContext('2d');
-                        createChartFunc(ctx, groupedData[parameter]['all'], 'Line Chart', minX, maxX, minY, maxY);
+                        createChartFunc(ctx, groupedData[parameter]['all'], 'Cumulative Probability', minX, maxX, minY, maxY);
                     }
                 }
             }
@@ -166,9 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Recreate charts with the new margin percentage
-        createCharts(groupedData, createLineChart, marginPercentage);
+        createCharts(groupedData, createCumulativeProbabilityChart, marginPercentage);
     });
 
     // Initial chart creation with the default margin
-    createCharts(groupedData, createLineChart);
+    createCharts(groupedData, createCumulativeProbabilityChart);
 });

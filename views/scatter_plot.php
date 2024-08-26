@@ -12,8 +12,22 @@ $filters = [
     "l.program_name" => isset($_GET['test_program']) ? $_GET['test_program'] : [],
     "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
     "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
-    "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
+    "tm.Column_Name" => []
 ];
+
+$xyParameters = [];
+$xParameters = [];
+$yParameters = [];
+
+if (isset($_GET['parameter'])) {
+    $filters["tm.Column_Name"] = $_GET['parameter'];
+    $xyParameters = $_GET['parameter'];
+}
+else if (isset($_GET['parameter-x']) && isset($_GET['parameter-y'])) {
+    $filters["tm.Column_Name"] = array_merge($_GET['parameter-x'], $_GET['parameter-y']);
+    $xParameters = $_GET['parameter-x'];
+    $yParameters = $_GET['parameter-y'];
+}
 
 $xColumn = isset($_GET["group-x"]) ? $_GET["group-x"][0] : null;
 $yColumn = isset($_GET["group-y"]) ? $_GET["group-y"][0] : null;
@@ -209,26 +223,24 @@ if ($isSingleParameter) {
             } else {
                 $globalCounters['ycol'][$yGroup][$xGroup]++;
             }
-            $groupedData[$yGroup][$xGroup][] = ['x' => $globalCounters['ycol'][$yGroup][$xGroup], 'y' => $yValue];
+            $groupedData[$parameter][$yGroup][$xGroup][] = ['x' => $globalCounters['ycol'][$yGroup][$xGroup], 'y' => $yValue];
         } elseif ($xColumn && !$yColumn) {
             if (!isset($globalCounters['xcol'][$yGroup][$xGroup])) {
                 $globalCounters['xcol'][$yGroup][$xGroup] = count($groupedData[$yGroup][$xGroup] ?? []) + 1;
             } else {
                 $globalCounters['xcol'][$yGroup][$xGroup]++;
             }
-            $groupedData[$xGroup][$yGroup][] = ['x' => $globalCounters['xcol'][$yGroup][$xGroup], 'y' => $yValue];
+            $groupedData[$parameter][$xGroup][$yGroup][] = ['x' => $globalCounters['xcol'][$yGroup][$xGroup], 'y' => $yValue];
         } elseif (!$xColumn && $yColumn) {
-
             if (!isset($globalCounters['ycol'][$yGroup])) {
                 $globalCounters['ycol'][$yGroup] = count($groupedData[$yGroup] ?? []) + 1;
             } else {
                 $globalCounters['ycol'][$yGroup]++;
             }
-            $groupedData[$yGroup][] = ['x' => $globalCounters['ycol'][$yGroup], 'y' => $yValue];
+            $groupedData[$parameter][$yGroup][] = ['x' => $globalCounters['ycol'][$yGroup], 'y' => $yValue];
         } else {
-
             $globalCounters['all']++;
-            $groupedData['all'][] = ['x' => $globalCounters['all'], 'y' => $yValue];
+            $groupedData[$parameter]['all'][] = ['x' => $globalCounters['all'], 'y' => $yValue];
         }
     }
 
@@ -236,9 +248,18 @@ if ($isSingleParameter) {
 }
 else {
     $combinations = [];
-    foreach ($filters['tm.Column_Name'] as $i => $parameter) {
-        for ($j = $i + 1; $j < count($filters['tm.Column_Name']); $j++) {
-            $combinations[] = [$parameter, $filters['tm.Column_Name'][$j]];
+    if ($xyParameters) {
+        foreach ($xyParameters as $i => $parameter) {
+            for ($j = $i + 1; $j < count($xyParameters); $j++) {
+                $combinations[] = [$parameter, $xyParameters[$j]];
+            }
+        }
+    }
+    else {
+        foreach ($xParameters as $x) {
+            foreach ($yParameters as $y) {
+                $combinations[] = [$x, $y];
+            }
         }
     }
 
@@ -437,7 +458,7 @@ foreach ($combinations as $index => $combination) {
 <?php
     }
 } else { ?>
-<h1 class="text-center text-2xl font-bold w-full mb-6">XY Line Chart</h1>
+<h1 class="text-center text-2xl font-bold w-full mb-6">Line Chart</h1>
  <div class="p-4">
     <div class="dark:border-gray-700 flex flex-col items-center">
         <div class="max-w-fit p-6 border-b-2 border-2">
