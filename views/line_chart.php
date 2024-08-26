@@ -12,12 +12,19 @@ $filters = [
     "l.program_name" => isset($_GET['test_program']) ? $_GET['test_program'] : [],
     "l.lot_ID" => isset($_GET['lot']) ? $_GET['lot'] : [],
     "w.wafer_ID" => isset($_GET['wafer']) ? $_GET['wafer'] : [],
-    "tm.Column_Name" => isset($_GET['parameter']) ? $_GET['parameter'] : []
+    "tm.Column_Name" => []
 ];
 
-$xColumn = isset($_GET["group-x"]) ? (($_GET["group-x"][0] === 'Probing_Sequence') ? 'p.abbrev' : 'w.' . $_GET["group-x"][0]) : null;
-$yColumn = isset($_GET["group-y"]) ? (($_GET["group-y"][0] === 'Probing_Sequence') ? 'p.abbrev' : 'w.' . $_GET["group-y"][0]) : null;
-$chartType = isset($_GET["type"]) ? $_GET["type"] : "scatter"; // default scatter chart
+if (isset($_GET['parameter'])) {
+    $filters["tm.Column_Name"] = $_GET['parameter'];
+}
+else if (isset($_GET['parameter-x']) && isset($_GET['parameter-y'])) {
+    $filters["tm.Column_Name"] = array_merge($_GET['parameter-x'], $_GET['parameter-y']);
+}
+
+$xColumn = isset($_GET["group-x"]) ? $_GET["group-x"][0] : null;
+$yColumn = isset($_GET["group-y"]) ? $_GET["group-y"][0] : null;
+$chartType = isset($_GET["type"]) ? $_GET["type"] : "line"; // default scatter chart
 
 // Prepare SQL filters
 $sql_filters = [];
@@ -39,32 +46,88 @@ if (!empty($sql_filters)) {
 
 $join_table_clause = '';
 
-// get the corresponding table names
-$query = "SELECT distinct tm.Table_Name FROM LOT l
-            JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
-            JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
-            $where_clause";
+            // get the corresponding table names
+            $query = "SELECT distinct tm.Table_Name FROM LOT l
+                      JOIN WAFER w ON w.Lot_Sequence = l.Lot_Sequence
+                      JOIN TEST_PARAM_MAP tm ON tm.Lot_Sequence = l.Lot_Sequence
+                      JOIN ProbingSequenceOrder p on p.probing_sequence = w.probing_sequence
+                      $where_clause";
+            
+            $stmt = sqlsrv_query($conn, $query, $params);
+            if ($stmt === false) { die('Query failed: ' . print_r(sqlsrv_errors(), true)); }
+            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $tables[] = $row['Table_Name']; }
+            sqlsrv_free_stmt($stmt); // Free the count statement here   
+            
+            // Define the query to get the mappings
+            $query = "
+            SELECT DISTINCT Program_Name, Table_Name, Column_Name
+            FROM TEST_PARAM_MAP
+            WHERE Program_Name IN (" . implode(',', array_fill(0, count($filters['l.program_name']), '?')) . ") AND Column_Name IN (" . implode(',', array_fill(0, count($filters['tm.Column_Name']), '?')) . ");
+            ";
 
-$stmt = sqlsrv_query($conn, $query, $params);
-if ($stmt === false) { die('Query failed: ' . print_r(sqlsrv_errors(), true)); }
-$tables = [];
-while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $tables[] = $row['Table_Name']; }
-sqlsrv_free_stmt($stmt); // Free the count statement here    
+            $stmt = sqlsrv_query($conn, $query, array_merge($filters['l.program_name'], $filters['tm.Column_Name']));
+            if ($stmt === false) { die(print_r(sqlsrv_errors(), true)); }
 
-$joins = [];
-for ($i = 0; $i < count($tables); $i++) {
-    if ($i === 0) {
-        // For the first table, use a base join
-        $joins[] = "JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Wafer_Sequence = w.Wafer_Sequence";
-    } else {
-        // For subsequent tables, join with the previous table
-        $joins[] = "JOIN " . $tables[$i] . " ON " . $tables[$i] . ".Die_Sequence = " . $tables[$i - 1] . ".Die_Sequence";
-    }
-}
+            // Initialize arrays
+            $tableToProgram = [];
+            $columnToTables = [];
 
-if (!empty($joins)) {
-    $join_table_clause = implode("\n", $joins);
-}
+            // Process the results
+            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                $programName = $row['Program_Name'];
+                $tableName = $row['Table_Name'];
+                $columnName = $row['Column_Name'];
+
+                // Populate program-to-tables mapping
+                if ($programName && $tableName) {
+                    if (!isset($programToTables[$tableName])) {
+                        $tableToProgram[$tableName] = [];
+                    }
+                    if (!in_array($tableName, $tableToProgram[$tableName])) {
+                        $tableToProgram[$tableName][] = $programName;
+                    }
+                }
+
+                // Populate column-to-tables mapping
+                if ($columnName && $tableName) {
+                    if (!isset($columnToTables[$columnName])) {
+                        $columnToTables[$columnName] = [];
+                    }
+                    if (!in_array($tableName, $columnToTables[$columnName])) {
+                        $columnToTables[$columnName][] = $tableName;
+                    }
+                }
+            }
+
+            $joins = [];
+            $programTracking = []; // To track the first table in each program
+
+            foreach ($tables as $currentTable) {
+                $programName = $tableToProgram[$currentTable][0]; // Get the program name for the current table
+
+                if (!isset($programTracking[$programName])) {
+                    // This is the first table in the program
+                    $joins[] = "LEFT JOIN " . $currentTable . " ON " . $currentTable . ".Wafer_Sequence = w.Wafer_Sequence AND l.Program_Name = '{$programName}'";
+                    $programTracking[$programName] = $currentTable; // Track this table as the first in the program
+                } else {
+                    // Subsequent table in the same program
+                    $joins[] = "LEFT JOIN " . $currentTable . " ON " . $currentTable . ".Die_Sequence = " . $programTracking[$programName] . ".Die_Sequence AND l.Program_Name = '{$programName}'";
+                }
+            }
+
+            if (!empty($joins)) {
+                $join_table_clause = implode("\n", $joins);
+            }
+
+            $dynamic_columns = [];
+            foreach ($columnToTables as $column => $tables) {
+                // Generate COALESCE statement for each column with all specified tables
+                $coalesceParts = [];
+                foreach ($tables as $table) {
+                    $coalesceParts[] = "{$table}.{$column}";
+                }
+                $dynamic_columns[$column] = count($coalesceParts) === 1 ? $coalesceParts[0] : "COALESCE(" . implode(", ", $coalesceParts) . ")";
+            }
 
 
 $sort_clause = '';
@@ -94,19 +157,10 @@ foreach ($parameters as $parameter) {
         'ycol' => []
     ];
 
-    $xLabel = 'Series';
-    $yLabel = $parameter;
-
-    $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
-    $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
-    $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
-    $testNameX = $xLabel;
-    sqlsrv_free_stmt($testNameStmtY);
-
     $tsql = "
     SELECT 
         w.Wafer_ID, 
-        {$parameter} AS Y, 
+        {$dynamic_columns[$parameter]} AS Y, 
         " . ($xColumn ? "$xColumn AS xGroup" : "'No xGroup' AS xGroup") . ", 
         " . ($yColumn ? "$yColumn AS yGroup" : "'No yGroup' AS yGroup") . "
     FROM LOT l
@@ -156,9 +210,12 @@ foreach ($parameters as $parameter) {
     sqlsrv_free_stmt($stmt);
 }
 
-$numDistinctGroups = count($groupedData);
-
 ?>
+
+<div class="fixed top-24 left-4">
+    <button onclick="window.history.back()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-150 ease-in-out flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Go Back
+</div>
 
 <div class="fixed top-24 right-4">
     <div class="flex w-full justify-center items-center gap-2">
@@ -188,10 +245,19 @@ $numDistinctGroups = count($groupedData);
         </div>
     </div>
 </div>
-<h1 class="text-center text-2xl font-bold w-full mb-6">XY Line Chart</h1>
+<h1 class="text-center text-2xl font-bold w-full mb-6">Line Chart</h1>
 <!-- Iterate and generate chart canvases -->
 <?php
 foreach ($groupedData as $parameter => $data) {
+    $xLabel = 'Series';
+    $yLabel = $parameter;
+
+    $testNameQuery = "SELECT test_name FROM TEST_PARAM_MAP WHERE Column_Name = ?";
+    $testNameStmtY = sqlsrv_query($conn, $testNameQuery, [$yLabel]);
+    $testNameY = sqlsrv_fetch_array($testNameStmtY, SQLSRV_FETCH_ASSOC)['test_name'];
+    $testNameX = $xLabel;
+    sqlsrv_free_stmt($testNameStmtY);
+
     echo '<div class="p-4">';
     echo '<div class="dark:border-gray-700 flex flex-col items-center">';
     echo '<div class="max-w-fit p-6 border-b-2 border-2">';
@@ -200,6 +266,9 @@ foreach ($groupedData as $parameter => $data) {
     echo '</div>';
 
     if (isset($xColumn) && isset($yColumn)) {
+        echo '<div class="flex flex-row items-center justify-center w-full">
+                <div class="-rotate-90"><h2 class="text-center text-xl font-semibold">'.$yColumn.'</h2></div>
+                <div class="flex flex-col items-center justify-center w-full">';
         $yGroupKeys = array_keys($data);
         $lastYGroup = end($yGroupKeys);
         foreach ($data as $yGroup => $xGroupData) {
@@ -217,7 +286,12 @@ foreach ($groupedData as $parameter => $data) {
             }
             echo '</div></div>';
         }
+        echo '<h3 class="text-center text-lg font-semibold">'.$xColumn.'</h3>
+            </div>
+        </div>';
     } elseif (isset($xColumn)) {
+        echo '<div class="flex flex-row items-center justify-center w-full">
+                <div class="flex flex-col items-center justify-center w-full">';
         echo '<div class="flex flex-row items-center justify-center w-full">';
         echo '<div class="grid gap-2 grid-cols-' . count($data) . '">';
         foreach ($data as $xGroup => $chartData) {
@@ -227,7 +301,13 @@ foreach ($groupedData as $parameter => $data) {
             echo '<h3 class="text-center text-lg font-semibold">' . $xGroup . '</h3></div>';
         }
         echo '</div></div>';
+        echo '<h3 class="text-center text-lg font-semibold">'.$xColumn.'</h3>
+            </div>
+        </div>';
     } elseif (isset($yColumn)) {
+        echo '<div class="flex flex-row items-center justify-center w-full">
+                <div class="-rotate-90"><h2 class="text-center text-xl font-semibold">'.$yColumn.'</h2></div>
+                <div class="flex flex-col items-center justify-center w-full">';
         echo '<div class="flex flex-row items-center justify-center w-full">';
         echo '<div class="grid gap-2 grid-cols-1">';
         foreach ($data as $yGroup => $chartData) {
@@ -238,6 +318,8 @@ foreach ($groupedData as $parameter => $data) {
             echo '</div>';
         }
         echo '</div></div>';
+        echo '</div>
+            </div>';
     } else {
         $chartId = "chartXY_{$parameter}_all";
         echo '<div class="flex items-center justify-center w-full">';
