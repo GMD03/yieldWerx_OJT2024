@@ -23,10 +23,10 @@ if (isset($_GET['parameter'])) {
     $filters["tm.Column_Name"] = $_GET['parameter'];
     $xyParameters = $_GET['parameter'];
 }
-else if (isset($_GET['parameter-x']) && isset($_GET['parameter-y'])) {
-    $filters["tm.Column_Name"] = array_merge($_GET['parameter-x'], $_GET['parameter-y']);
-    $xParameters = $_GET['parameter-x'];
-    $yParameters = $_GET['parameter-y'];
+else if (isset($_GET['parameter-x']) || isset($_GET['parameter-y'])) {
+    $filters["tm.Column_Name"] = array_merge($_GET['parameter-x'] ?? [], $_GET['parameter-y'] ?? []);
+    $xParameters = $_GET['parameter-x'] ?? [];
+    $yParameters = $_GET['parameter-y'] ?? [];
 }
 
 $xColumn = isset($_GET["group-x"]) ? $_GET["group-x"][0] : null;
