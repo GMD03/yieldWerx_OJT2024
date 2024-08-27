@@ -36,8 +36,8 @@
             if (isset($_GET['parameter'])) {
                 $this->filters["tm.Column_Name"] = $_GET['parameter'];
             }
-            else if (isset($_GET['parameter-x']) && isset($_GET['parameter-y'])) {
-                $this->filters["tm.Column_Name"] = array_merge($_GET['parameter-x'], $_GET['parameter-y']);
+            else if (isset($_GET['parameter-x']) || isset($_GET['parameter-y'])) {
+                $this->filters["tm.Column_Name"] = array_merge($_GET['parameter-x'] ?? [], $_GET['parameter-y'] ?? []);
             }
 
             // Prepare SQL filters
