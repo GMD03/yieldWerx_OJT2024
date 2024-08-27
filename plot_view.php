@@ -59,10 +59,10 @@
         <div class="p-4 rounded-lg dark:border-gray-700 mt-14">
             <div>
             <?php
-            if (isset($_GET["type"]) && $_GET['type'] === "line") {
+            if ((isset($_GET["type"]) && $_GET['type'] === "line") || (!isset($_GET["parameter-x"]) && isset($_GET["parameter-y"])) || (isset($_GET["parameter"]) && count($_GET["parameter"]) === 1)) {
                 include('views/line_chart.php');
             }
-            else if (isset($_GET["type"]) && $_GET['type'] === "cp") {
+            else if ((isset($_GET["type"]) && $_GET['type'] === "cp") || (isset($_GET["parameter-x"]) && !isset($_GET["parameter-y"]))) {
                 include('views/cumulative_probability.php');
             }
             else {
