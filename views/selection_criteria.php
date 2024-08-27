@@ -493,7 +493,8 @@ $(document).ready(function() {
         }
 
         const selectedWafer = $('#wafer').val();
-        if (!empty(selectedWafer)) {
+        console.log(selectedWafer);
+        if (selectedWafer.length > 0) {
             selectedValues.Wafer_ID = selectedWafer;
             fetchOptions(selectedValues, $('#parameter'), 'parameter');
             fetchOptions(selectedValues, $('#parameter-x'), 'parameter');
