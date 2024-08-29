@@ -65,36 +65,84 @@
 <div class="container mx-auto p-6">
     <h1 class="text-center text-2xl font-bold mb-4 w-full">Selection Criteria</h1>
     <form action="table_view.php" method="GET" id="criteriaForm">
-        <div class="flex flex-row w-full mb-4 gap-4">
+        
+        
+        <div class="flex w-full justify-end items-end">
             
-        <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
-            <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Filter</h2>
+        </div>
 
-            <!-- Dropdown menu -->
-            <div class="flex w-full justify-start items-center gap-2 mb-4">
-                <button id="dropdownXFilterButton" data-dropdown-toggle="dropdownXFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
-                    X-Filter
-                    <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                    </svg>
-                </button>
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div>
+                <label for="facility" class="block text-sm font-medium text-gray-700">Facility</label>
+                <select id="facility" name="facility[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                    <?php foreach ($facilities as $facility): ?>
+                        <option value="<?= $facility ?>"><?= $facility ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
-                <div id="dropdownXFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
-                    
+            <div>
+                <label for="work_center" class="block text-sm font-medium text-gray-700">Work Center</label>
+                <select id="work_center" name="work_center[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                    <!-- Options will be populated based on facility selection -->
+                </select>
+            </div>
+
+            <div>
+                <label for="device_name" class="block text-sm font-medium text-gray-700">Device Name</label>
+                <select id="device_name" name="device_name[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                    <!-- Options will be populated based on work center selection -->
+                </select>
+            </div>
+
+            <div>
+                <label for="test_program" class="block text-sm font-medium text-gray-700">Test Program</label>
+                <select id="test_program" name="test_program[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                    <!-- Options will be populated based on device name selection -->
+                </select>
+            </div>
+
+            <div>
+                <label for="lot" class="block text-sm font-medium text-gray-700">Lot</label>
+                <select id="lot" name="lot[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                    <!-- Options will be populated based on test program selection -->
+                </select>
+            </div>
+
+            <div>
+                <label for="wafer" class="block text-sm font-medium text-gray-700">Wafer</label>
+                <select id="wafer" name="wafer[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                    <!-- Options will be populated based on lot selection -->
+                </select>
+            </div>
+
+            <div class="flex flex-col w-full col-span-3">
+                <div class="flex w-full">
+                    <label for="parameter" class="text-sm font-medium text-gray-700 block">Parameter</label>
+                    <label for="parameter-x" class="text-sm font-medium text-gray-700 w-1/2 hidden">X Parameter</label>
+                    <label for="parameter-y" class="text-sm font-medium text-gray-700 w-1/2 ml-6 hidden">Y Parameter</label>
+                    <button id="parameter-button" type="button" class="ml-auto py-0.5 px-1.5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-gray-700 focus:z-10 focus:ring-4 focus:ring-gray-100">&#x2BC8;</button>
                 </div>
-
-                <button id="dropdownYFilterButton" data-dropdown-toggle="dropdownYFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
-                    Y-Filter
-                    <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                    </svg>
-                </button>
-
-                <div id="dropdownYFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
-                    
+                
+                <div id="parameter-1" class="w-full" style="display: flex">
+                    <select id="parameter" name="parameter[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                        <!-- Options will be populated based on wafer selection -->    
+                    </select>
+                </div>
+                
+                <div id="parameter-2" class="w-full" style="display: none">
+                    <select id="parameter-x" name="parameter-x[]" size="5" class="bg-white mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                        <!-- Options will be populated based on wafer selection -->
+                    </select>
+                    <select id="parameter-y" name="parameter-y[]" size="5" class="bg-white mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
+                        <!-- Options will be populated based on wafer selection -->
+                    </select>
                 </div>
             </div>
-</div>
+        </div>
+        <div class="flex flex-row w-full mb-4 gap-4">
+            
+        
 
             
 <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
@@ -261,6 +309,34 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+        <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
+            <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Filter</h2>
+
+            <!-- Dropdown menu -->
+            <div class="flex w-full justify-start items-center gap-2 mb-4">
+                <button id="dropdownXFilterButton" data-dropdown-toggle="dropdownXFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
+                    X-Filter
+                    <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                    </svg>
+                </button>
+
+                <div id="dropdownXFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
+                    
+                </div>
+
+                <button id="dropdownYFilterButton" data-dropdown-toggle="dropdownYFilter" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 focus:ring-4 focus:outline-none focus:ring-indigo-300 dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:focus:ring-indigo-800" type="button">
+                    Y-Filter
+                    <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                    </svg>
+                </button>
+
+                <div id="dropdownYFilter" class="z-10 hidden bg-white rounded-lg shadow w-60 dark:bg-gray-700">
+                    
+                </div>
+            </div>
+        </div>
 
 
             <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
@@ -281,80 +357,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
 
-        </div>
-        
-        <div class="flex w-full justify-end items-end">
-            
-        </div>
-
-        <div class="grid grid-cols-3 gap-4 mb-4">
-            <div>
-                <label for="facility" class="block text-sm font-medium text-gray-700">Facility</label>
-                <select id="facility" name="facility[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                    <?php foreach ($facilities as $facility): ?>
-                        <option value="<?= $facility ?>"><?= $facility ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div>
-                <label for="work_center" class="block text-sm font-medium text-gray-700">Work Center</label>
-                <select id="work_center" name="work_center[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                    <!-- Options will be populated based on facility selection -->
-                </select>
-            </div>
-
-            <div>
-                <label for="device_name" class="block text-sm font-medium text-gray-700">Device Name</label>
-                <select id="device_name" name="device_name[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                    <!-- Options will be populated based on work center selection -->
-                </select>
-            </div>
-
-            <div>
-                <label for="test_program" class="block text-sm font-medium text-gray-700">Test Program</label>
-                <select id="test_program" name="test_program[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                    <!-- Options will be populated based on device name selection -->
-                </select>
-            </div>
-
-            <div>
-                <label for="lot" class="block text-sm font-medium text-gray-700">Lot</label>
-                <select id="lot" name="lot[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                    <!-- Options will be populated based on test program selection -->
-                </select>
-            </div>
-
-            <div>
-                <label for="wafer" class="block text-sm font-medium text-gray-700">Wafer</label>
-                <select id="wafer" name="wafer[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                    <!-- Options will be populated based on lot selection -->
-                </select>
-            </div>
-
-            <div class="flex flex-col w-full col-span-3">
-                <div class="flex w-full">
-                    <label for="parameter" class="text-sm font-medium text-gray-700 block">Parameter</label>
-                    <label for="parameter-x" class="text-sm font-medium text-gray-700 w-1/2 hidden">X Parameter</label>
-                    <label for="parameter-y" class="text-sm font-medium text-gray-700 w-1/2 ml-6 hidden">Y Parameter</label>
-                    <button id="parameter-button" type="button" class="ml-auto py-0.5 px-1.5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-gray-700 focus:z-10 focus:ring-4 focus:ring-gray-100">&#x2BC8;</button>
-                </div>
-                
-                <div id="parameter-1" class="w-full" style="display: flex">
-                    <select id="parameter" name="parameter[]" size="5" class="bg-white mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                        <!-- Options will be populated based on wafer selection -->    
-                    </select>
-                </div>
-                
-                <div id="parameter-2" class="w-full" style="display: none">
-                    <select id="parameter-x" name="parameter-x[]" size="5" class="bg-white mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                        <!-- Options will be populated based on wafer selection -->
-                    </select>
-                    <select id="parameter-y" name="parameter-y[]" size="5" class="bg-white mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" multiple>
-                        <!-- Options will be populated based on wafer selection -->
-                    </select>
-                </div>
-            </div>
         </div>
         <div class="text-center w-full flex justify-start gap-4">
             <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded">Execute</button>
