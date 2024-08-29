@@ -245,11 +245,9 @@ foreach ($parameters as $parameter) {
                     }
                 }
             } else {
-                foreach ($data['all'] as &$dataValue) {
-                    foreach ($dataValue as &$values) {
-                        $percentage = ($values['y'] / $globalTotal['all']) * 100;
-                        $values['y'] = $percentage;
-                    }
+                foreach ($data['all'] as &$values) {
+                    $percentage = ($values['y'] / $globalTotal['all']) * 100;
+                    $values['y'] = $percentage;
                 }
             }
         }
