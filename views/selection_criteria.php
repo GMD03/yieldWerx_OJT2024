@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             <div class="border-2 border-gray-200 rounded-lg p-4 mb-4 w-1/4">
                 <h2 class="text-md italic mb-4 w-auto text-gray-500 bg-gray-50 bg-transparent text-center">Type of Chart</h2>
-                <div class="flex flex-col w-full justify-start items-center gap-2">
+                <div class="flex flex-col w-full justify-start gap-2 ml-auto">
                     <div class="flex items-center">
                         <input id="radio-1" type="radio" value="line" name="type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
                         <label for="radio-1" class="ms-2 text-sm font-medium text-gray-900">Line Chart</label>
@@ -352,14 +352,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="flex items-center">
                         <input id="radio-2" type="radio" value="cp" name="type" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
-                        <label for="radio-2" class="ms-2 text-sm font-medium text-gray-900">Cumulative Probability</label>
+                        <label for="radio-2" class="ms-2 text-sm font-medium text-gray-900">Cumulative Probability Graph</label>
                     </div>
                 </div>
             </div>
 
         </div>
         <div class="text-center w-full flex justify-start gap-4">
-            <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded">Execute</button>
+            <button type="button" id="executeButton" class="bg-blue-500 text-white px-4 py-2 rounded">Execute</button>
             <button type="button" id="resetButton" class="px-4 py-2 bg-red-500 text-white rounded">Reset</button>
         </div>
     </form>
@@ -506,4 +506,103 @@ $(document).ready(function() {
     });
     
 });
+</script>
+
+<!-- Modal structure -->
+<div id="confirmationModal" class="fixed inset-0 z-50 hidden overflow-y-auto flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="inline-block overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl sm:max-w-lg sm:w-full">
+        <div class="px-4 pt-5 pb-4 bg-white sm:p-6 sm:pb-4">
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">
+                Your data will be displayed using 
+            </h3>
+            <div class="mt-2">
+                <p id="confirmationText" class="text-md text-gray-1200 font-bold italic" >
+                    <!-- Selection criteria will be inserted here dynamically -->
+                </p>
+            </div>
+        </div>
+        <div class="px-4 py-3 bg-gray-50 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button type="button" id="confirmExecute" class="inline-flex justify-center w-full px-4 py-2 text-base font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                Proceed
+            </button>
+            <button type="button" id="cancelExecute" class="inline-flex justify-center w-full px-4 py-2 mt-3 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Execute button to open modal
+    document.getElementById('executeButton').addEventListener('click', function (event) {
+        event.preventDefault(); // Prevent the form from submitting immediately
+
+        // Initialize criteria object to collect selected criteria
+        let criteria = {};
+/*        
+        criteria.facility = Array.from(document.getElementById('facility').selectedOptions).map(option => option.text).join(', ');
+        criteria.work_center = Array.from(document.getElementById('work_center').selectedOptions).map(option => option.text).join(', ');
+        criteria.device_name = Array.from(document.getElementById('device_name').selectedOptions).map(option => option.text).join(', ');
+        criteria.test_program = Array.from(document.getElementById('test_program').selectedOptions).map(option => option.text).join(', ');
+        criteria.lot = Array.from(document.getElementById('lot').selectedOptions).map(option => option.text).join(', ');
+        criteria.wafer = Array.from(document.getElementById('wafer').selectedOptions).map(option => option.text).join(', ');
+        criteria.parameters = Array.from(document.getElementById('parameter').selectedOptions).map(option => option.text).join(', ');
+        criteria.X_parameters = Array.from(document.getElementById('parameter-x').selectedOptions).map(option => option.text).join(', ');
+        criteria.Y_parameters = Array.from(document.getElementById('parameter-y').selectedOptions).map(option => option.text).join(', ');
+
+        const selectedGroupX = document.querySelector('input[name="group-x[]"]:checked');
+        const selectedGroupY = document.querySelector('input[name="group-y[]"]:checked');
+        criteria.group_x = selectedGroupX ? selectedGroupX.nextElementSibling.textContent : 'None';
+        criteria.group_y = selectedGroupY ? selectedGroupY.nextElementSibling.textContent : 'None';
+*/
+        const selectedChartType = document.querySelector('input[name="type"]:checked');
+        const parametersCount = Array.from(document.getElementById('parameter').selectedOptions).length 
+            + Array.from(document.getElementById('parameter-x').selectedOptions).length 
+            + Array.from(document.getElementById('parameter-y').selectedOptions).length;
+
+        if (selectedChartType) {
+            criteria.chart_type = selectedChartType.nextElementSibling.textContent;
+        } else {
+            if (parametersCount === 1) {
+                criteria.chart_type = 'Line Chart [Default]';
+            } else if (parametersCount >= 2) {
+                criteria.chart_type = 'Scatter Plot [Default]';
+            } else {
+                criteria.chart_type = 'Please select a chart type after selecting the needed criteria.';
+            }
+        }
+
+        // Build the criteria text without "Chart type:" prefix
+        let criteriaText = '';
+        for (let key in criteria) {
+            // Use a conditional check to exclude "Chart type:" label from the output
+            if (key === 'chart_type') {
+                criteriaText += `${criteria[key]}\n`;
+            } else {
+                criteriaText += `${key.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}: ${criteria[key]}\n`;
+            }
+        }
+
+
+        // Show modal with criteria
+        document.getElementById('confirmationText').innerText = criteriaText;
+        document.getElementById('confirmationModal').classList.remove('hidden');
+    });
+
+    // Confirm button to submit the form
+    document.getElementById('confirmExecute').addEventListener('click', function () {
+        document.getElementById('criteriaForm').submit();
+    });
+
+    // Cancel button to close modal without submitting
+    document.getElementById('cancelExecute').addEventListener('click', function () {
+        document.getElementById('confirmationModal').classList.add('hidden');
+    });
+});
+
+function toggleModal() {
+    const modal = document.getElementById('confirmationModal');
+    modal.classList.toggle('hidden');
+}
 </script>
