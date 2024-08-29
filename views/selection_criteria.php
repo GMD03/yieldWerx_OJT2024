@@ -557,16 +557,24 @@ document.addEventListener('DOMContentLoaded', function () {
         criteria.group_y = selectedGroupY ? selectedGroupY.nextElementSibling.textContent : 'None';
 */
         const selectedChartType = document.querySelector('input[name="type"]:checked');
-        const parametersCount = Array.from(document.getElementById('parameter').selectedOptions).length 
-            + Array.from(document.getElementById('parameter-x').selectedOptions).length 
-            + Array.from(document.getElementById('parameter-y').selectedOptions).length;
+        const parameterXCount = Array.from(document.getElementById('parameter-x').selectedOptions).length;
+        const parameterYCount = Array.from(document.getElementById('parameter-y').selectedOptions).length;
+        const parameterCount = Array.from(document.getElementById('parameter').selectedOptions).length 
+            + parameterXCount 
+            + parameterYCount;
 
         if (selectedChartType) {
             criteria.chart_type = selectedChartType.nextElementSibling.textContent;
         } else {
-            if (parametersCount === 1) {
-                criteria.chart_type = 'Line Chart [Default]';
-            } else if (parametersCount >= 2) {
+            if (parameterCount === 1) {
+                if (parameterXCount === 1 && parameterYCount === 0) {
+                    criteria.chart_type = 'Cumulative Probability Graph [Default]';
+                } else if (parameterYCount === 1 && parameterXCount === 0) {
+                    criteria.chart_type = 'Line Chart [Default]';
+                } else {
+                    criteria.chart_type = 'Line Chart [Default]'; // Fallback for other cases
+                }
+            } else if (parameterCount >= 2) {
                 criteria.chart_type = 'Scatter Plot [Default]';
             } else {
                 criteria.chart_type = 'Please select a chart type after selecting the needed criteria.';
@@ -583,6 +591,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 criteriaText += `${key.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}: ${criteria[key]}\n`;
             }
         }
+
 
 
         // Show modal with criteria
